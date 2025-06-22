@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Harvest{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        /* Base styles from previous implementation */
+        .header-logo {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre;
+            text-align: center;
+            color: var(--main-accent-color);
+            text-shadow: 0 0 5px var(--main-accent-color);
+            padding: 10px 0;
+            line-height: 1.2;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            background: rgba(0, 255, 65, 0.1);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        nav ul li a {
+            display: block;
+            padding: 10px 20px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 1.2em;
+            transition: all 0.3s;
+        }
+
+        nav ul li a:hover {
+            background: var(--main-accent-color);
+            color: var(--background-color);
+            text-shadow: 0 0 5px var(--background-color);
+        }
+
+        .flash-messages {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .flash-messages li {
+            padding: 15px;
+            margin: 10px 20px;
+            border: 1px solid;
+            text-align: center;
+        }
+        .flash-success {
+            background: rgba(0, 255, 65, 0.2);
+            border-color: var(--main-accent-color);
+            color: var(--text-color);
+        }
+        .flash-danger {
+            background: rgba(255, 0, 64, 0.2);
+            border-color: var(--secondary-accent-color);
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body {% if request.endpoint in ['chat', 'group_chat'] %}class="chat-page"{% endif %}>
+    <div class="page-container">
+        <header>
+            <div class="logo">
+                <pre>
+                    █████   █████   █████████   ███████████   █████   █████ ██████████  █████████  ███████████
+                    ░░███   ░░███   ███░░░░░███ ░░███░░░░░███ ░░███   ░░███ ░░███░░░░░█ ███░░░░░███░█░░░███░░░█
+                     ░███    ░███  ░███    ░███  ░███    ░███  ░███    ░███  ░███  █ ░ ░███    ░░░ ░   ░███  ░ 
+                     ░███████████  ░███████████  ░██████████   ░███    ░███  ░██████   ░░█████████     ░███    
+                     ░███░░░░░███  ░███░░░░░███  ░███░░░░░███  ░░███   ███   ░███░░█    ░░░░░░░░███    ░███    
+                     ░███    ░███  ░███    ░███  ░███    ░███   ░░░█████░    ░███ ░   █ ███    ░███    ░███    
+                     █████   █████ █████   █████ █████   █████    ░░███      ██████████░░█████████     █████   
+                    ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░      ░░░      ░░░░░░░░░░  ░░░░░░░░░     ░░░░░    
+                </pre>
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}">CHATS</a>
+                <a href="{{ url_for('search') }}">SEARCH</a>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <a href="{{ url_for('admin_panel') }}">ADMIN</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}">LOGOUT</a>
+            </nav>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <main class="content-wrapper">
+            {% block content %}{% endblock %}
+        </main>
+
+        <hr>
+        <div class="footer-text">
+            <p>-- END OF TRANSMISSION --</p>
+            <p class="glitch" data-text="> ACCESS GRANTED. WELCOME, {{ current_user.nickname }}.">> ACCESS GRANTED. WELCOME, {{ current_user.nickname }}.</p>
+        </div>
+    </div>
+</body>
+</html> 

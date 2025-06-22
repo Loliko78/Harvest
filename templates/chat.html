@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Чат с {{ other_user.encrypted_nickname }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Чат с {{ other_user.encrypted_nickname }}</h2>
+            <div class="key-info">
+                <span>Ключ: <span id="headerCurrentKey">Не установлен</span></span>
+                <button onclick="showKeyModal()">Управление ключами</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Назад</a>
+            </div>
+        </div>
+        
+        <div class="messages-container" id="messages">
+            {% for message in messages %}
+            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                <div class="message-content">
+                    <span class="message-text">{{ message.content }}</span>
+                    <span class="message-time">{{ message.timestamp.strftime('%H:%M') }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="chat-input-container">
+            <form class="chat-input-form" id="messageForm">
+                <div class="chat-input-group">
+                    <textarea 
+                        class="chat-input" 
+                        id="messageInput" 
+                        placeholder="Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)" 
+                        required
+                        rows="1"
+                    ></textarea>
+                </div>
+                <button type="submit" class="chat-send-btn">Отправить</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для управления ключами -->
+<div id="keyModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Управление ключами шифрования</h3>
+        <div class="key-management">
+            <div class="key-section">
+                <h4>Текущий ключ:</h4>
+                <div class="current-key" id="currentKey">Не установлен</div>
+            </div>
+            <div class="key-section">
+                <h4>Установить новый ключ:</h4>
+                <input type="text" id="newKey" placeholder="Введите ключ шифрования" class="form-control">
+                <button onclick="setKey()" class="btn btn-primary">Установить ключ</button>
+            </div>
+            <div class="key-section">
+                <h4>Генерация ключа:</h4>
+                <button onclick="generateKey()" class="btn btn-secondary">Сгенерировать новый ключ</button>
+            </div>
+            {% if show_sync_button %}
+            <div class="key-section">
+                <h4>Синхронизация:</h4>
+                <button onclick="syncKeys()" class="btn btn-secondary">Синхронизировать ключи</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    const socket = io();
+    const currentUserId = {{ current_user.id }};
+    const otherUserId = {{ other_user.id }};
+    const chatId = {{ chat.id }};
+    let currentKey = localStorage.getItem('chat_key_' + otherUserId) || null;
+    
+    // Присоединяемся к комнате чата
+    socket.emit('join_chat', {
+        chat_id: chatId,
+        user_id: currentUserId
+    });
+    
+    // Обновляем отображение текущего ключа
+    document.getElementById('headerCurrentKey').textContent = currentKey || 'Не установлен';
+    
+    // Расшифровываем существующие сообщения при загрузке
+    async function decryptExistingMessages() {
+        const messagesContainer = document.getElementById('messages');
+        const messageElements = messagesContainer.querySelectorAll('.message');
+        
+        for (let element of messageElements) {
+            const messageText = element.querySelector('.message-text');
+            if (messageText && messageText.textContent !== '[ошибка чтения сообщения]') {
+                try {
+                    const decryptedText = await decryptMessage(messageText.textContent, currentKey);
+                    messageText.textContent = decryptedText;
+                } catch (error) {
+                    console.error('Ошибка расшифровки существующего сообщения:', error);
+                }
+            }
+        }
+        
+        // Прокручиваем вниз после расшифровки
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Вызываем расшифровку при загрузке
+    decryptExistingMessages();
+    
+    // Функции для работы с ключами
+    function showKeyModal() {
+        document.getElementById('keyModal').style.display = 'block';
+    }
+    
+    function setKey() {
+        const newKey = document.getElementById('newKey').value.trim();
+        if (newKey) {
+            currentKey = newKey;
+            localStorage.setItem('chat_key_' + otherUserId, newKey);
+            document.getElementById('currentKey').textContent = newKey;
+            document.getElementById('headerCurrentKey').textContent = newKey;
+            document.getElementById('newKey').value = '';
+            document.getElementById('keyModal').style.display = 'none';
+        }
+    }
+    
+    async function generateKey() {
+        try {
+            const response = await fetch('/user/generate_key_json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            const result = await response.json();
+            if (result.success) {
+                const newKey = result.key;
+                currentKey = newKey;
+                localStorage.setItem('chat_key_' + otherUserId, newKey);
+                document.getElementById('currentKey').textContent = newKey;
+                document.getElementById('headerCurrentKey').textContent = newKey;
+                document.getElementById('newKey').value = newKey;
+            } else {
+                alert(result.message || 'Ошибка генерации ключа');
+            }
+        } catch (error) {
+            alert('Ошибка сети при генерации ключа');
+        }
+    }
+    
+    async function syncKeys() {
+        try {
+            const response = await fetch(`/chat/{{ chat.id }}/sync_keys`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            const result = await response.json();
+            if (result.success) {
+                const newKey = result.chat_key;
+                currentKey = newKey;
+                localStorage.setItem('chat_key_' + otherUserId, newKey);
+                document.getElementById('currentKey').textContent = newKey;
+                document.getElementById('headerCurrentKey').textContent = newKey;
+                document.getElementById('newKey').value = newKey;
+                alert('Ключи успешно синхронизированы');
+            } else {
+                alert(result.message || 'Ошибка синхронизации ключей');
+            }
+        } catch (error) {
+            alert('Ошибка сети при синхронизации ключей');
+        }
+    }
+    
+    // Закрытие модального окна
+    document.querySelector('.close').addEventListener('click', function() {
+        document.getElementById('keyModal').style.display = 'none';
+    });
+    
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('keyModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Функция шифрования
+    async function encryptMessage(text, key) {
+        if (!key) return text;
+        
+        try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            
+            // Создаем ключ правильной длины (256 бит = 32 байта)
+            let keyBytes;
+            if (key.length < 32) {
+                // Если ключ короче 32 байт, дополняем его
+                const keyEncoder = new TextEncoder();
+                const originalKey = keyEncoder.encode(key);
+                keyBytes = new Uint8Array(32);
+                keyBytes.set(originalKey);
+                // Заполняем оставшиеся байты повторением ключа
+                for (let i = originalKey.length; i < 32; i++) {
+                    keyBytes[i] = originalKey[i % originalKey.length];
+                }
+            } else if (key.length > 32) {
+                // Если ключ длиннее 32 байт, обрезаем его
+                const keyEncoder = new TextEncoder();
+                const originalKey = keyEncoder.encode(key);
+                keyBytes = originalKey.slice(0, 32);
+            } else {
+                // Если ключ ровно 32 байта
+                const keyEncoder = new TextEncoder();
+                keyBytes = keyEncoder.encode(key);
+            }
+            
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                keyBytes,
+                { name: 'AES-GCM' },
+                false,
+                ['encrypt']
+            );
+            
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                cryptoKey,
+                data
+            );
+            
+            const encryptedArray = new Uint8Array(encrypted);
+            const combined = new Uint8Array(iv.length + encryptedArray.length);
+            combined.set(iv);
+            combined.set(encryptedArray, iv.length);
+            
+            return btoa(String.fromCharCode(...combined));
+        } catch (error) {
+            console.error('Ошибка шифрования:', error);
+            return text; // Возвращаем исходный текст если шифрование не удалось
+        }
+    }
+    
+    // Функция дешифрования
+    async function decryptMessage(encryptedText, key) {
+        if (!key) return encryptedText;
+        
+        try {
+            const combined = new Uint8Array(atob(encryptedText).split('').map(c => c.charCodeAt(0)));
+            const iv = combined.slice(0, 12);
+            const encrypted = combined.slice(12);
+            
+            // Создаем ключ правильной длины (256 бит = 32 байта)
+            let keyBytes;
+            if (key.length < 32) {
+                // Если ключ короче 32 байт, дополняем его
+                const keyEncoder = new TextEncoder();
+                const originalKey = keyEncoder.encode(key);
+                keyBytes = new Uint8Array(32);
+                keyBytes.set(originalKey);
+                // Заполняем оставшиеся байты повторением ключа
+                for (let i = originalKey.length; i < 32; i++) {
+                    keyBytes[i] = originalKey[i % originalKey.length];
+                }
+            } else if (key.length > 32) {
+                // Если ключ длиннее 32 байт, обрезаем его
+                const keyEncoder = new TextEncoder();
+                const originalKey = keyEncoder.encode(key);
+                keyBytes = originalKey.slice(0, 32);
+            } else {
+                // Если ключ ровно 32 байта
+                const keyEncoder = new TextEncoder();
+                keyBytes = keyEncoder.encode(key);
+            }
+            
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                keyBytes,
+                { name: 'AES-GCM' },
+                false,
+                ['decrypt']
+            );
+            
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                cryptoKey,
+                encrypted
+            );
+            
+            return new TextDecoder().decode(decrypted);
+        } catch (error) {
+            console.error('Ошибка дешифрования:', error);
+            return encryptedText; // Возвращаем исходный текст если не удалось расшифровать
+        }
+    }
+    
+    // Отправка сообщения
+    async function postMessage(text) {
+        const messagesContainer = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message sent';
+        
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
+        
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <span class="message-text">${text}</span>
+                <span class="message-time">${timeString}</span>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Обработка отправки формы
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    
+    if (messageForm) {
+        messageForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const text = messageInput.value.trim();
+            if (!text) return;
+            
+            // Показываем сообщение сразу
+            await postMessage(text);
+            
+            // Очищаем поле ввода
+            messageInput.value = '';
+            
+            // Шифруем и отправляем на сервер
+            const encryptedText = await encryptMessage(text, currentKey);
+            
+            socket.emit('send_message', {
+                content: encryptedText,
+                recipient_id: otherUserId,
+                sender_id: currentUserId
+            });
+        });
+    }
+    
+    // Обработка Enter/Shift+Enter
+    if (messageInput) {
+        messageInput.addEventListener('keydown', async function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                
+                const text = this.value.trim();
+                if (!text) return;
+                
+                // Показываем сообщение сразу
+                await postMessage(text);
+                
+                // Очищаем поле ввода
+                this.value = '';
+                
+                // Шифруем и отправляем на сервер
+                const encryptedText = await encryptMessage(text, currentKey);
+                
+                socket.emit('send_message', {
+                    content: encryptedText,
+                    recipient_id: otherUserId,
+                    sender_id: currentUserId
+                });
+            }
+        });
+    }
+    
+    // Получение новых сообщений
+    socket.on('new_message', async function(data) {
+        if (data.sender_id === otherUserId && data.recipient_id === currentUserId) {
+            const decryptedText = await decryptMessage(data.content, currentKey);
+            
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message received';
+            
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                              now.getMinutes().toString().padStart(2, '0');
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="message-text">${decryptedText}</span>
+                    <span class="message-time">${timeString}</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    });
+    
+    // Автофокус на поле ввода
+    if (messageInput) {
+        messageInput.focus();
+    }
+    
+    // Отключаемся от комнаты при закрытии страницы
+    window.addEventListener('beforeunload', function() {
+        socket.emit('leave_chat', {
+            chat_id: chatId,
+            user_id: currentUserId
+        });
+    });
+</script>
+{% endblock %} 

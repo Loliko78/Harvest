@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Чаты{% endblock %}
+
+{% block content %}
+<div class="chats-page-container">
+    
+    <aside class="sidebar-actions">
+        <h3>> ДЕЙСТВИЯ</h3>
+        <form method="POST" action="{{ url_for('search') }}" class="sidebar-form">
+            <input type="text" name="nickname" class="input-field" placeholder="ПОИСК ПО НИКУ..." required>
+            <button type="submit" class="btn">> НАЙТИ</button>
+        </form>
+        <a href="{{ url_for('create_group') }}" class="btn">> СОЗДАТЬ ГРУППУ</a>
+        
+        <!-- Key management can be a future addition -->
+        <!-- <button id="keys-btn" class="btn">> УПРАВЛЕНИЕ КЛЮЧАМИ</button> -->
+    </aside>
+
+    <main class="chats-main-content">
+        <div class="chats-list-container">
+            <h3>> ЛИЧНЫЕ СООБЩЕНИЯ</h3>
+            <div class="chats-list">
+                {% for chat_info in chat_list %}
+                    <a href="{{ url_for('chat', chat_id=chat_info.chat.id) }}" class="chat-tile">
+                        <div class="chat-avatar">U</div>
+                        <div class="chat-info">
+                            <div class="chat-nick">{{ chat_info.other_user_nickname }}</div>
+                            <div class="chat-last">Личный чат</div>
+                        </div>
+                        <div class="chat-meta">
+                            {% if chat_info.unread_count > 0 %}
+                                <span class="unread-indicator">{{ chat_info.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% else %}
+                    <p>> НЕТ АКТИВНЫХ ЧАТОВ.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chats-list-container">
+            <h3>> ГРУППОВЫЕ ЧАТЫ</h3>
+            <div class="chats-list">
+                {% for group in group_list %}
+                    <a href="{{ url_for('group_chat', invite_link=group.invite_link) }}" class="chat-tile">
+                        <div class="chat-avatar">G</div>
+                        <div class="chat-info">
+                            <div class="chat-nick">{{ group.group_name }}</div>
+                            <div class="chat-last">Групповой чат</div>
+                        </div>
+                         <div class="chat-meta">
+                             <!-- unread indicator for groups can be added here -->
+                        </div>
+                    </a>
+                {% else %}
+                    <p>> ВЫ НЕ СОСТОИТЕ В ГРУППАХ.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+/* Add page-specific styles here */
+.chats-page-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.sidebar-actions {
+    flex: 1;
+    min-width: 250px;
+    border: 1px solid var(--border-color);
+    padding: 15px;
+}
+.sidebar-actions h3 {
+    color: var(--main-accent-color);
+}
+.sidebar-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.chats-main-content {
+    flex: 3;
+    min-width: 300px;
+}
+.chats-list-container {
+    margin-bottom: 30px;
+}
+.chats-list-container h3 {
+    color: var(--main-accent-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+</style>
+{% endblock %} 

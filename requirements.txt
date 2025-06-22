@@ -1,0 +1,9 @@
+Flask
+Flask-Login
+Flask-WTF
+SQLAlchemy
+cryptography
+Pillow
+piexif
+Werkzeug
+flask-socketio 

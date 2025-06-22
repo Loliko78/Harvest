@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>> ПАНЕЛЬ АДМИНИСТРАТОРА_</h2>
+
+    <div class="admin-section">
+        <h3>> УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ПОЗЫВНОЙ</th>
+                        <th>СТАТУС</th>
+                        <th>ДЕЙСТВИЯ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.nickname_enc }}</td>
+                        <td>{% if user.banned %}<span class="status-banned">[ЗАБЛОКИРОВАН]</span>{% else %}<span class="status-ok">[OK]</span>{% endif %}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_ban', user_id=user.id) }}" style="display:inline;">
+                                <button class="btn {% if user.banned %}btn-ok{% else %}btn-danger{% endif %}" type="submit">
+                                    {% if user.banned %} > РАЗБЛОКИРОВАТЬ {% else %} > ЗАБЛОКИРОВАТЬ {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h3>> УПРАВЛЕНИЕ ГРУППАМИ</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ИМЯ ГРУППЫ</th>
+                        <th>ДЕЙСТВИЯ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for group in groups %}
+                    <tr>
+                        <td>{{ group.id }}</td>
+                        <td>{{ group.name_enc.decode('utf-8') if group.name_enc else '' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_delete_group', group_id=group.id) }}" style="display:inline;">
+                                <button class="btn btn-danger" type="submit">> УДАЛИТЬ</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-container {
+        padding: 1em;
+    }
+    .admin-section {
+        margin-bottom: 2em;
+        border: 1px solid var(--border-color);
+        padding: 1.5em;
+    }
+    .admin-section h3 {
+        color: var(--main-accent-color);
+        margin: 0 0 1em 0;
+    }
+    .table-wrapper {
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 12px 15px;
+        border: 1px solid var(--border-color);
+        text-align: left;
+    }
+    th {
+        background-color: rgba(0, 255, 65, 0.1);
+        color: var(--main-accent-color);
+        font-size: 1.2em;
+    }
+    td {
+        color: var(--text-color);
+    }
+    .status-banned {
+        color: #ff5a5a;
+    }
+    .status-ok {
+        color: #61ff98;
+    }
+    .btn.btn-danger {
+        border-color: #ff5a5a;
+        color: #ff5a5a;
+    }
+    .btn.btn-danger:hover {
+        background: #ff5a5a;
+        color: var(--background-color);
+    }
+    .btn.btn-ok {
+        border-color: #61ff98;
+        color: #61ff98;
+    }
+    .btn.btn-ok:hover {
+        background: #61ff98;
+        color: var(--background-color);
+    }
+</style>
+{% endblock %} 

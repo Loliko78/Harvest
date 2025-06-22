@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>> ПОИСК АГЕНТОВ_</h2>
+    <form method="POST" action="{{ url_for('search') }}">
+        <div class="form-group">
+            <label for="nickname">> ПОЗЫВНОЙ:</label>
+            <input type="text" name="nickname" id="nickname" class="input-field" placeholder="Введите ник..." required>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn-submit">> НАЙТИ</button>
+        </div>
+    </form>
+
+    {% if users %}
+        <h3>> РЕЗУЛЬТАТЫ ПОИСКА:</h3>
+        <div class="chats-list">
+            {% for user in users %}
+                <a href="{{ url_for('start_chat', recipient_id=user.id) }}" class="chat-tile">
+                    <div class="chat-avatar">{{ user.nickname_enc[0]|upper }}</div>
+                    <div class="chat-info">
+                        <div class="chat-nick">{{ user.nickname_enc }}</div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %} 

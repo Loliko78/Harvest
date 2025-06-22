@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Ошибка {{ error_code }}{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <div class="error-header">
+            <h1 class="error-code">{{ error_code }}</h1>
+            <h2 class="error-title">{{ error_title }}</h2>
+        </div>
+        
+        <div class="error-message">
+            <p>{{ error_message }}</p>
+        </div>
+        
+        <div class="error-details">
+            {% if error_details %}
+            <div class="details-section">
+                <h3>Детали ошибки:</h3>
+                <pre class="error-details-text">{{ error_details }}</pre>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Вернуться на главную</a>
+            <button onclick="history.back()" class="btn btn-secondary">Назад</button>
+            <button onclick="location.reload()" class="btn btn-secondary">Обновить страницу</button>
+        </div>
+        
+        <div class="error-footer">
+            <p class="error-timestamp">Время ошибки: {{ timestamp }}</p>
+            {% if request_id %}
+            <p class="error-id">ID запроса: {{ request_id }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+    padding: 20px;
+}
+
+.error-content {
+    background: var(--background-color);
+    border: 2px solid var(--main-accent-color);
+    border-radius: 10px;
+    padding: 40px;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+    text-align: center;
+}
+
+.error-header {
+    margin-bottom: 30px;
+}
+
+.error-code {
+    font-size: 4em;
+    color: var(--main-accent-color);
+    margin: 0;
+    text-shadow: 0 0 20px var(--main-accent-color);
+    font-family: var(--font-main);
+}
+
+.error-title {
+    font-size: 1.5em;
+    color: var(--text-color);
+    margin: 10px 0;
+    font-family: var(--font-main);
+}
+
+.error-message {
+    margin-bottom: 30px;
+}
+
+.error-message p {
+    font-size: 1.1em;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.error-details {
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.details-section h3 {
+    color: var(--secondary-accent-color);
+    margin-bottom: 10px;
+    font-family: var(--font-main);
+}
+
+.error-details-text {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 15px;
+    color: var(--text-color);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.error-actions {
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-actions .btn {
+    min-width: 150px;
+}
+
+.error-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+}
+
+.error-timestamp,
+.error-id {
+    color: var(--secondary-accent-color);
+    font-size: 0.9em;
+    margin: 5px 0;
+    font-family: var(--font-main);
+}
+
+/* Анимация для кода ошибки */
+.error-code {
+    animation: glitch 2s infinite;
+}
+
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .error-content {
+        padding: 20px;
+    }
+    
+    .error-code {
+        font-size: 3em;
+    }
+    
+    .error-title {
+        font-size: 1.2em;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .error-actions .btn {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+</style>
+{% endblock %} 

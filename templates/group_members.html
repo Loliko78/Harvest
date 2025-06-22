@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Участники группы{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>> УЧАСТНИКИ ГРУППЫ: {{ group.name }}</h2>
+
+    {% if is_creator %}
+    <div class="invite-section">
+        <h3>> ПРИГЛАСИТЬ АГЕНТА</h3>
+        <form method="POST" action="{{ url_for('invite_by_nickname', invite_link=group.invite_link) }}" class="form-inline">
+            <input type="text" name="nickname" class="input-field" placeholder="ПОЗЫВНОЙ АГЕНТА" required>
+            <button type="submit" class="btn">> ДОБАВИТЬ</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="members-list">
+        {% for member in members %}
+        <div class="member-tile">
+            <div class="chat-avatar">{{ member.nickname[0]|upper }}</div>
+            <div class="member-info">
+                <div class="member-nick">{{ member.nickname }}</div>
+                <div class="member-role">
+                    {% if member.id == group.creator_id %}
+                        [СОЗДАТЕЛЬ]
+                    {% else %}
+                        [АГЕНТ]
+                    {% endif %}
+                </div>
+            </div>
+            <div class="member-actions">
+                {% if is_creator and member.id != group.creator_id %}
+                    <form method="POST" action="{{ url_for('remove_group_member', invite_link=group.invite_link_enc.decode('utf-8'), user_id=member.id) }}">
+                        <button type="submit" class="btn btn-danger">> УДАЛИТЬ</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p>> В ГРУППЕ НЕТ УЧАСТНИКОВ.</p>
+        {% endfor %}
+    </div>
+     <a href="{{ url_for('group_chat', invite_link=group.invite_link_enc.decode('utf-8')) }}" class="btn" style="margin-top: 20px;">< НАЗАД К ЧАТУ</a>
+</div>
+
+<style>
+    .invite-section {
+        margin-bottom: 2em;
+        padding: 1.5em;
+        border: 1px solid var(--border-color);
+    }
+    .invite-section h3 {
+        margin: 0 0 1em 0;
+        color: var(--main-accent-color);
+    }
+    .form-inline {
+        display: flex;
+        gap: 10px;
+    }
+    .form-inline .input-field {
+        flex-grow: 1;
+    }
+
+    .members-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .member-tile {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        gap: 15px;
+    }
+    .member-info {
+        flex-grow: 1;
+    }
+    .member-nick {
+        font-size: 1.2em;
+        color: var(--text-color);
+    }
+    .member-role {
+        font-size: 0.9em;
+        color: var(--main-accent-color);
+    }
+    .btn.btn-danger {
+        border-color: #ff5a5a;
+        color: #ff5a5a;
+    }
+    .btn.btn-danger:hover {
+        background: #ff5a5a;
+        color: var(--background-color);
+    }
+</style>
+{% endblock %} 

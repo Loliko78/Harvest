@@ -43,10 +43,6 @@ html {
     height: 100%;
     /* Отключаем анимации обновления */
     scroll-behavior: auto;
-    /* Отключаем скроллинг на мобильных устройствах */
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
 }
 
 body {
@@ -63,11 +59,6 @@ body {
     /* Отключаем анимации обновления */
     animation: none;
     transition: none;
-    /* Отключаем скроллинг на мобильных устройствах */
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
 }
 
 body::before {
@@ -265,19 +256,16 @@ main.content-wrapper {
     text-shadow: 0 0 10px var(--accent-color);
 }
 
-/* Дополнительные стили для кнопок в заголовке чата */
 .chat-header .key-info {
     display: flex;
     align-items: center;
     gap: 10px;
     font-size: 0.9em;
     color: var(--text-secondary);
-    flex-wrap: wrap;
 }
 
 .chat-header .key-info span {
     color: var(--accent-color);
-    white-space: nowrap;
 }
 
 .chat-header button,
@@ -290,7 +278,6 @@ main.content-wrapper {
     cursor: pointer;
     font-size: 0.9em;
     transition: all 0.3s ease;
-    white-space: nowrap;
     text-decoration: none;
     display: inline-block;
 }
@@ -302,13 +289,14 @@ main.content-wrapper {
 }
 
 .chat-header .btn.btn-secondary {
-    background: var(--text-secondary);
-    color: var(--bg-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--accent-color);
 }
 
 .chat-header .btn.btn-secondary:hover {
-    background: var(--text-primary);
-    box-shadow: 0 0 10px var(--text-secondary);
+    background: var(--accent-color);
+    color: var(--bg-primary);
 }
 
 .messages-container {
@@ -519,14 +507,505 @@ main.content-wrapper {
 
 /* Адаптивность для мобильных устройств */
 @media (max-width: 768px) {
-    /* Отключаем скроллинг на мобильных устройствах */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
+    .message {
+        max-width: 85%;
     }
     
+    .message-content {
+        padding: 10px 12px;
+    }
+    
+    .chat-header h2 {
+        font-size: 1em;
+    }
+    
+    .chat-header .key-info {
+        font-size: 0.8em;
+    }
+}
+
+/* Remove link underlines */
+a {
+    text-decoration: none;
+    color: var(--main-accent-color);
+}
+
+/* Modal button styles */
+.modal .btn {
+    background: var(--main-accent-color);
+    color: var(--background-color);
+    border: none;
+    padding: 10px 20px;
+    font-family: var(--font-main);
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin: 5px;
+}
+
+.modal .btn:hover {
+    background: var(--secondary-accent-color);
+    box-shadow: 0 0 10px var(--main-accent-color);
+}
+
+.modal .btn.btn-small {
+    padding: 8px 15px;
+    font-size: 0.9em;
+}
+
+/* Key management button */
+.key-management-btn {
+    display: flex;
+    align-items: center;
+}
+
+.key-management-btn .btn {
+    background: var(--main-accent-color);
+    color: var(--background-color);
+    border: none;
+    padding: 8px 15px;
+    font-family: var(--font-main);
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.key-management-btn .btn:hover {
+    background: var(--secondary-accent-color);
+    box-shadow: 0 0 10px var(--main-accent-color);
+}
+
+/* Management buttons */
+.management-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.management-buttons .btn {
+    background: var(--main-accent-color);
+    color: var(--background-color);
+    border: none;
+    padding: 8px 15px;
+    font-family: var(--font-main);
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.management-buttons .btn:hover {
+    background: var(--secondary-accent-color);
+    box-shadow: 0 0 10px var(--main-accent-color);
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--input-bg);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--main-accent-color);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-accent-color);
+}
+
+/* ASCII Art Background */
+body::before {
+    content: "01010101\n10101010\n01010101\n10101010\n01010101\n10101010\n01010101\n10101010";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 80%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 0, 64, 0.1) 0%, transparent 50%),
+        linear-gradient(45deg, transparent 40%, rgba(0, 255, 65, 0.05) 50%, transparent 60%);
+    background-size: 100% 100%, 100% 100%, 200px 200px;
+    z-index: -1;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    color: rgba(0, 255, 65, 0.1);
+    white-space: pre;
+    line-height: 8px;
+    overflow: hidden;
+}
+
+/* Matrix Rain Effect */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 255, 65, 0.03) 2px,
+            rgba(0, 255, 65, 0.03) 4px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 255, 65, 0.03) 2px,
+            rgba(0, 255, 65, 0.03) 4px
+        );
+    z-index: -1;
+    pointer-events: none;
+    animation: matrix-rain 20s linear infinite;
+}
+
+@keyframes matrix-rain {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+/* Enhanced Glitch Effects */
+.glitch-text {
+    position: relative;
+    animation: glitch 2s infinite;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch-text::before {
+    animation: glitch-1 0.5s infinite;
+    color: var(--glitch-color-1);
+    z-index: -1;
+}
+
+.glitch-text::after {
+    animation: glitch-2 0.5s infinite;
+    color: var(--glitch-color-2);
+    z-index: -2;
+}
+
+@keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-1 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-1px, 1px); }
+    40% { transform: translate(-1px, -1px); }
+    60% { transform: translate(1px, 1px); }
+    80% { transform: translate(1px, -1px); }
+}
+
+@keyframes glitch-2 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(1px, -1px); }
+    40% { transform: translate(1px, 1px); }
+    60% { transform: translate(-1px, -1px); }
+    80% { transform: translate(-1px, 1px); }
+}
+
+/* HEADER & LOGO */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    flex-wrap: wrap;
+}
+
+.logo-ascii {
+    display: none; /* Hidden by default, shown on larger screens */
+    font-family: var(--font-main);
+    color: var(--main-accent-color);
+    text-shadow: 0 0 5px var(--main-accent-color);
+    margin: 0;
+    line-height: 0.9;
+    font-size: 12px; /* smaller font for pre */
+}
+
+.logo-glitch {
+    font-size: 3em;
+    font-weight: bold;
+    color: var(--main-accent-color);
+    position: relative;
+    animation: glitch 3s infinite;
+    text-transform: uppercase;
+}
+
+.logo-glitch::before,
+.logo-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-color);
+    overflow: hidden;
+}
+
+.logo-glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 var(--glitch-color-1);
+    animation: glitch-anim-1 2s infinite linear alternate-reverse;
+}
+
+.logo-glitch::after {
+    left: -2px;
+    text-shadow: -2px 0 var(--glitch-color-2);
+    animation: glitch-anim-2 2s infinite linear alternate-reverse;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.nav-links a, .nav-links .welcome-user, .nav-links a:visited {
+    color: var(--secondary-accent-color);
+    text-decoration: none;
+    font-size: 1.2em;
+    padding: 5px;
+    transition: all 0.3s;
+}
+
+.nav-links a:hover {
+    color: var(--main-accent-color);
+    background: var(--border-color);
+    text-shadow: 0 0 5px var(--main-accent-color);
+}
+
+.welcome-user {
+    color: var(--main-accent-color);
+}
+
+/* AUTH FORMS (LOGIN/REGISTER) */
+.auth-container {
+    width: 100%;
+    max-width: 450px;
+    margin: 50px auto;
+    border: 1px solid var(--border-color);
+    padding: 2em;
+    animation: fadeIn 1s;
+}
+
+.auth-container h2 {
+    text-align: center;
+    font-size: 2.5em;
+    color: var(--main-accent-color);
+    text-transform: uppercase;
+    margin-bottom: 1em;
+}
+
+.form-group {
+    margin-bottom: 1.5em;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: .5em;
+    color: var(--secondary-accent-color);
+}
+
+.input-field {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 12px;
+    font-family: var(--font-main);
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--main-accent-color);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--main-accent-color);
+    color: var(--main-accent-color);
+    font-family: var(--font-main);
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+}
+
+.btn-submit:hover {
+    background: var(--main-accent-color);
+    color: var(--background-color);
+    box-shadow: 0 0 15px var(--main-accent-color);
+}
+
+.switch-auth {
+    text-align: center;
+    margin-top: 1.5em;
+}
+
+.switch-auth a {
+    color: var(--main-accent-color);
+    text-decoration: underline;
+}
+
+/* FLASH MESSAGES */
+.flashes {
+    list-style-type: '>';
+    padding: 0 0 0 20px;
+    margin-bottom: 20px;
+}
+
+.flashes li {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid;
+}
+
+.flashes .success {
+    color: #61ff98;
+    border-color: #61ff98;
+}
+
+.flashes .danger {
+    color: #ff5a5a;
+    border-color: #ff5a5a;
+}
+
+/* CHAT LIST */
+.chats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.chat-tile {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    color: var(--text-color);
+    transition: all 0.3s;
+}
+
+.chat-tile:hover {
+    background-color: rgba(0, 255, 65, 0.1);
+    border-color: var(--main-accent-color);
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--secondary-accent-color);
+    color: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    margin-right: 15px;
+}
+
+.chat-info {
+    flex-grow: 1;
+}
+
+.chat-nick {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--main-accent-color);
+}
+
+.chat-last {
+    font-size: 1em;
+    color: var(--secondary-accent-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px; /* Adjust as needed */
+}
+
+.chat-meta {
+    text-align: right;
+}
+
+.chat-time {
+    font-size: 0.9em;
+    color: var(--secondary-accent-color);
+}
+
+.unread-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: var(--main-accent-color);
+    border-radius: 50%;
+    margin-top: 5px;
+    box-shadow: 0 0 8px var(--main-accent-color);
+}
+
+/* ANIMATIONS */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glitch {
+    2%, 64% { transform: translate(2px, 0) skew(0deg); }
+    4%, 60% { transform: translate(-2px, 0) skew(0deg); }
+    62% { transform: translate(0, 0) skew(5deg); }
+}
+
+@keyframes glitch-anim-1 {
+    0% { clip-path: inset(23% 0 78% 0); }
+    20% { clip-path: inset(54% 0 7% 0); }
+    40% { clip-path: inset(9% 0 38% 0); }
+    60% { clip-path: inset(83% 0 13% 0); }
+    80% { clip-path: inset(29% 0 49% 0); }
+    100% { clip-path: inset(4% 0 94% 0); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip-path: inset(83% 0 1% 0); }
+    20% { clip-path: inset(1% 0 92% 0); }
+    40% { clip-path: inset(66% 0 16% 0); }
+    60% { clip-path: inset(93% 0 3% 0); }
+    80% { clip-path: inset(45% 0 50% 0); }
+    100% { clip-path: inset(78% 0 13% 0); }
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
     body {
         font-size: 16px;
     }
@@ -1320,126 +1799,136 @@ a {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    /* Отключаем скроллинг на мобильных устройствах */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
+    .chat-container {
+        height: calc(100vh - 130px);
+        max-height: calc(100vh - 130px);
+        width: 95%;
+        max-width: none;
     }
     
-    body {
-        font-size: 16px;
-    }
-
-    .header {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .logo-glitch {
-        font-size: 2em;
+    .footer-text {
+        padding: 1px 0;
+        font-size: 0.5em;
     }
     
-    .nav-links {
-        justify-content: center;
-        width: 100%;
+    .footer-text p {
+        margin: 0.5px 0;
     }
-
-    .auth-container {
-        margin: 20px auto;
-        padding: 1.5em;
+    
+    .footer-text .glitch {
+        font-size: 0.6em;
     }
-
-    .chat-grid-container {
-        height: calc(100vh - 150px); /* Adjust for taller mobile header */
+    
+    hr {
+        margin: 1px 0;
     }
-
+    
+    .chat-header {
+        padding: 8px 12px;
+    }
+    
+    .chat-header h2 {
+        font-size: 0.9em;
+    }
+    
+    .messages-container {
+        padding: 12px;
+    }
+    
+    .chat-input-container {
+        padding: 8px 12px;
+    }
+    
+    .chat-form {
+        gap: 6px;
+    }
+    
+    .chat-input {
+        padding: 6px 8px;
+        font-size: 0.85em;
+        min-height: 30px;
+    }
+    
+    .chat-send-btn {
+        padding: 6px 12px;
+        font-size: 0.85em;
+    }
+    
     .msg {
         max-width: 90%;
-    }
-
-    .chat-grid-container {
-        grid-template-columns: 1fr;
+        padding: 6px 10px;
+        margin-bottom: 8px;
     }
     
-    .key-panel,
-    .group-management {
-        margin: 5px 0;
+    .msg-sender {
+        font-size: 0.75em;
+    }
+    
+    .msg-content {
+        font-size: 0.85em;
+    }
+    
+    .msg-time {
+        font-size: 0.65em;
+    }
+    
+    .key-management-btn .btn,
+    .management-buttons .btn {
+        padding: 5px 10px;
+        font-size: 0.75em;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 5% auto;
         padding: 15px;
     }
     
-    .btn {
-        padding: 10px 15px;
-        font-size: 1em;
+    .modal .btn {
+        padding: 6px 12px;
+        font-size: 0.8em;
+        margin: 2px;
     }
 }
 
-@media (min-width: 1024px) {
-    .logo-ascii {
-        display: block; /* Show ASCII logo on larger screens */
-    }
-    .logo-glitch {
-        display: none; /* Hide glitch logo on larger screens */
-    }
-}
-
-/* Еще больше уменьшаем для очень маленьких экранов */
 @media (max-width: 480px) {
-    /* Отключаем скроллинг на мобильных устройствах */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
+    .chat-container {
+        height: calc(100vh - 110px);
+        max-height: calc(100vh - 110px);
+        width: 98%;
     }
     
-    .chat-container {
-        height: calc(100vh - 160px); /* Увеличиваем отступ для кнопок */
-        max-height: calc(100vh - 160px);
-        width: 98%;
+    .footer-text {
+        padding: 1px 0;
+        font-size: 0.4em;
+    }
+    
+    .footer-text p {
+        margin: 0.5px 0;
+    }
+    
+    .footer-text .glitch {
+        font-size: 0.5em;
+    }
+    
+    hr {
+        margin: 1px 0;
     }
     
     .chat-header {
         padding: 6px 10px;
-        min-height: 70px; /* Минимальная высота для кнопок */
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
     }
     
     .chat-header h2 {
         font-size: 0.8em;
-        margin: 0;
-    }
-    
-    .chat-header .key-info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .chat-header .key-info span {
-        font-size: 0.7em;
-    }
-    
-    .chat-header button,
-    .chat-header .btn {
-        padding: 3px 6px;
-        font-size: 0.7em;
-        min-width: auto;
     }
     
     .messages-container {
         padding: 8px;
-        height: calc(100vh - 260px); /* Уменьшаем высоту для кнопок */
     }
     
     .chat-input-container {
         padding: 6px 10px;
-        min-height: 50px; /* Минимальная высота для поля ввода */
     }
     
     .chat-form {
@@ -1450,7 +1939,6 @@ a {
         padding: 5px 6px;
         font-size: 0.8em;
         min-height: 28px;
-        max-height: 60px; /* Ограничиваем максимальную высоту */
     }
     
     .chat-send-btn {
@@ -1492,23 +1980,6 @@ a {
         padding: 5px 10px;
         font-size: 0.75em;
         margin: 1px;
-    }
-    
-    .footer-text {
-        padding: 1px 0;
-        font-size: 0.4em;
-    }
-    
-    .footer-text p {
-        margin: 0.5px 0;
-    }
-    
-    .footer-text .glitch {
-        font-size: 0.5em;
-    }
-    
-    hr {
-        margin: 1px 0;
     }
 }
 
@@ -1988,20 +2459,5 @@ body.chat-page .container {
     
     .message-sender {
         font-size: 0.7em;
-    }
-}
-
-/* Отключаем скроллинг в контенте на мобильных устройствах */
-@media (max-width: 768px) {
-    main.content-wrapper {
-        overflow: hidden;
-        padding: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    main.content-wrapper {
-        overflow: hidden;
-        padding: 5px;
     }
 } 

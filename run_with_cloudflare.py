@@ -12,7 +12,7 @@ from app import app
 
 def run_flask():
     """Запускает Flask приложение"""
-    app.run(host='127.0.0.1', port=8080, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False)
 
 def start_cloudflare_tunnel():
     """Запускает Cloudflare Tunnel"""
@@ -25,7 +25,7 @@ def start_cloudflare_tunnel():
     try:
         print("🌐 Запуск Cloudflare Tunnel...")
         process = subprocess.Popen(
-            [cloudflared_path, 'tunnel', '--url', 'http://127.0.0.1:8080'],
+            [cloudflared_path, 'tunnel', '--url', 'http://127.0.0.1:5000'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

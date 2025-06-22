@@ -37,8 +37,10 @@ app.logger.disabled = True
 # Проверка HTTPS (или Tor)
 @app.before_request
 def enforce_https():
-    if not (request.is_secure or request.headers.get('X-Forwarded-Proto', '') == 'https' or request.host.startswith('localhost') or request.host.startswith('127.0.0.1') or request.host.endswith('.onion')):
-        return 'Доступ только через HTTPS или Tor', 403
+    # Временно отключаем для тестирования
+    return None
+    # if not (request.is_secure or request.headers.get('X-Forwarded-Proto', '') == 'https' or request.host.startswith('localhost') or request.host.startswith('127.0.0.1') or request.host.endswith('.onion')):
+    #     return 'Доступ только через HTTPS или Tor', 403
 
 # Генерируем безопасный ключ для шифрования ников
 NICKNAME_KEY = os.environ.get('NICKNAME_KEY', os.urandom(32))
@@ -1296,4 +1298,4 @@ def handle_exception(error):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    socketio.run(app, debug=True, host='127.0.0.1', port=8080) 
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000) 

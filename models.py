@@ -11,6 +11,10 @@ class User(UserMixin, db.Model):
     is_admin = Column(Boolean, default=False)
     banned = Column(Boolean, default=False)
     public_key = Column(LargeBinary, nullable=True)  # Публичный ключ пользователя
+    avatar = Column(String(128), nullable=True)  # Путь к аватарке или стандартная иконка
+    anonymous_mode = Column(Boolean, default=True)  # Включено ли шифрование
+    global_chat_key = Column(String(128), nullable=True)  # Глобальный ключ для чатов
+    global_group_key = Column(String(128), nullable=True)  # Глобальный ключ для групп
     chats1 = relationship('Chat', foreign_keys='Chat.user1_id', backref='user1', lazy=True)
     chats2 = relationship('Chat', foreign_keys='Chat.user2_id', backref='user2', lazy=True)
 
@@ -32,6 +36,7 @@ class Group(db.Model):
     creator_id = Column(Integer, ForeignKey('user.id'), nullable=False)  # Создатель группы
     session_key = Column(LargeBinary, nullable=True)  # Временный ключ сессии для PFS
     session_expires = Column(DateTime, nullable=True)  # Время истечения сессии
+    avatar = Column(String(128), nullable=True)  # Путь к аватарке или стандартная иконка
     messages = relationship('Message', backref='group', lazy=True)
 
 class Message(db.Model):
@@ -64,4 +69,37 @@ class ReadTracking(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     chat_id = Column(Integer, ForeignKey('chat.id'), nullable=False)
-    last_read = Column(DateTime, nullable=False, default=datetime.datetime.utcnow) 
+    last_read = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+class Channel(db.Model):
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64), nullable=False)
+    description = Column(String(256), nullable=True)
+    creator_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    avatar = Column(String(128), nullable=True)  # Путь к аватарке или стандартная иконка
+    key_enc = Column(LargeBinary, nullable=True)
+    deleted = Column(db.Boolean, default=False)  # Мягкое удаление канала
+    posts = relationship('ChannelPost', backref='channel', lazy='dynamic')
+
+class ChannelPost(db.Model):
+    id = Column(Integer, primary_key=True)
+    channel_id = Column(Integer, ForeignKey('channel.id'), nullable=False)
+    author_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    content = Column(String(2048), nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    comments = relationship('ChannelComment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+
+class ChannelComment(db.Model):
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey('channel_post.id'), nullable=False)
+    author_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    content = Column(String(1024), nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    author = relationship('User', backref='channel_comments', lazy='joined')
+
+class ChannelSubscriber(db.Model):
+    id = Column(Integer, primary_key=True)
+    channel_id = Column(Integer, ForeignKey('channel.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+
+# !!! После добавления avatar и Channel не забудь выполнить миграцию БД (alembic или вручную) !!! 

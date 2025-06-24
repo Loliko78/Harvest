@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Канал: {{ channel.name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+.channel-hero {
+    display: flex;
+    align-items: center;
+    gap: 2em;
+    background: linear-gradient(90deg, var(--main-accent-color) 0%, var(--bg-primary) 100%);
+    border-radius: 18px;
+    padding: 2em 2em 1em 2em;
+    margin-bottom: 2em;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    animation: fadeIn 1s;
+}
+.channel-hero-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 0 24px var(--main-accent-color);
+    border: 3px solid var(--main-accent-color);
+    transition: box-shadow 0.3s;
+}
+.channel-hero-avatar img {
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.channel-hero-info {
+    flex: 1;
+}
+.channel-hero-title {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: var(--main-accent-color);
+    margin-bottom: 0.2em;
+    letter-spacing: 1px;
+    text-shadow: 0 0 12px var(--main-accent-color);
+}
+.channel-hero-desc {
+    color: var(--text-secondary);
+    font-size: 1.1em;
+    margin-bottom: 0.5em;
+}
+.channel-hero-actions {
+    display: flex;
+    gap: 1em;
+    margin-top: 1em;
+}
+.channel-btn {
+    background: linear-gradient(90deg, var(--main-accent-color), #7a6ff0);
+    color: var(--bg-primary);
+    border: none;
+    padding: 0.7em 1.6em;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 12px var(--main-accent-color);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+    outline: none;
+}
+.channel-btn:hover {
+    background: linear-gradient(90deg, #7a6ff0, var(--main-accent-color));
+    box-shadow: 0 4px 24px var(--main-accent-color);
+    transform: translateY(-2px) scale(1.04);
+}
+.channel-btn-danger {
+    background: linear-gradient(90deg, #ff1a4d, #7a6ff0);
+    color: #fff;
+}
+.channel-btn-danger:hover {
+    background: linear-gradient(90deg, #7a6ff0, #ff1a4d);
+}
+.channel-avatar-choices {
+    display: flex;
+    gap: 10px;
+    margin-top: 1em;
+    flex-wrap: wrap;
+}
+.channel-avatar-choice-img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background: var(--bg-secondary);
+    transition: border 0.2s;
+}
+input[type="radio"]:checked + .channel-avatar-choice-img {
+    border-color: var(--main-accent-color);
+}
+.channel-avatar-upload-label {
+    display: inline-block;
+    padding: 0.5em 1em;
+    background: var(--accent-color);
+    color: var(--text-primary);
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+.channel-posts-section {
+    margin-top: 2em;
+}
+.channel-posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2em;
+    margin-top: 1.5em;
+}
+.channel-post-card {
+    background: linear-gradient(120deg, var(--bg-secondary) 60%, var(--main-accent-color) 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    padding: 1.5em 2em;
+    position: relative;
+    animation: fadeInUp 0.7s;
+    border: 2px solid var(--main-accent-color);
+    transition: box-shadow 0.3s, border 0.3s;
+}
+.channel-post-card:hover {
+    box-shadow: 0 8px 32px var(--main-accent-color);
+    border: 2px solid #7a6ff0;
+}
+.channel-post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7em;
+}
+.channel-post-author {
+    color: var(--main-accent-color);
+    font-weight: bold;
+    font-size: 1em;
+}
+.channel-post-time {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+.channel-post-content {
+    font-size: 1.15em;
+    color: var(--text-primary);
+    margin-bottom: 0.7em;
+    word-break: break-word;
+}
+.channel-post-media {
+    margin-top: 0.5em;
+}
+.channel-comments-section {
+    margin-top: 1em;
+    background: rgba(0,0,0,0.08);
+    border-radius: 10px;
+    padding: 1em;
+}
+.channel-comment {
+    margin-bottom: 0.7em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px dashed var(--main-accent-color);
+    animation: fadeIn 0.5s;
+}
+.channel-comment:last-child {
+    border-bottom: none;
+}
+.channel-comment-author {
+    color: var(--main-accent-color);
+    font-weight: bold;
+    margin-right: 0.5em;
+}
+.channel-comment-time {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+.channel-comment-content {
+    color: var(--text-primary);
+    font-size: 1em;
+    margin-top: 0.2em;
+}
+.channel-comment-form {
+    display: flex;
+    gap: 0.5em;
+    margin-top: 1em;
+    align-items: flex-end;
+}
+.channel-comment-form input[type="text"] {
+    flex: 1;
+    border-radius: 8px;
+    border: 1px solid var(--main-accent-color);
+    padding: 0.5em 1em;
+    font-size: 1em;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: border 0.2s;
+}
+.channel-comment-form input[type="text"]:focus {
+    border-color: #7a6ff0;
+}
+.channel-comment-form input[type="file"] {
+    margin-left: 8px;
+}
+.channel-comment-form button {
+    background: var(--main-accent-color);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5em 1.2em;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px var(--main-accent-color);
+}
+.channel-comment-form button:hover {
+    background: #7a6ff0;
+    box-shadow: 0 4px 16px #7a6ff0;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+</style>
+<div class="container">
+    <div class="channel-hero">
+        <div class="channel-hero-avatar">
+            <img src="{{ url_for('static', filename=channel.avatar or 'avatars/user_1.jpg') }}" alt="avatar">
+        </div>
+        <div class="channel-hero-info">
+            <div class="channel-hero-title">{{ channel.name }}</div>
+            <div class="channel-hero-desc">{{ channel.description }}</div>
+            <div class="channel-hero-actions">
+                {% if current_user.id == channel.creator_id %}
+                <form method="POST" enctype="multipart/form-data" style="display:inline;">
+                    <div class="channel-avatar-choices">
+                        {% for icon in ['darkmask.svg', 'skull.svg', 'eye.svg', 'terminal.svg', 'hacker.svg'] %}
+                        <label>
+                            <input type="radio" name="avatar_choice" value="avatars/{{ icon }}" {% if channel.avatar == 'avatars/' + icon %}checked{% endif %} style="display:none;">
+                            <img src="{{ url_for('static', filename='avatars/' + icon) }}" class="channel-avatar-choice-img" alt="std-avatar">
+                        </label>
+                        {% endfor %}
+                        <label>
+                            <input type="file" name="avatar_upload" accept="image/*" style="display:none;">
+                            <span class="channel-avatar-upload-label">Загрузить...</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="channel-btn">Сохранить аватарку</button>
+                </form>
+                <form method="POST" action="{{ url_for('delete_channel', channel_id=channel.id) }}" onsubmit="return confirm('Удалить канал безвозвратно?');" style="display:inline;">
+                    <button type="submit" class="channel-btn channel-btn-danger">Удалить канал</button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('subscribe_channel', channel_id=channel.id) }}" style="display:inline;">
+                    <button type="submit" class="channel-btn">Подписаться</button>
+                </form>
+                <form method="POST" action="{{ url_for('unsubscribe_channel', channel_id=channel.id) }}" style="display:inline;">
+                    <button type="submit" class="channel-btn channel-btn-danger">Отписаться</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="channel-posts-section">
+        <h3 style="color:var(--main-accent-color);font-size:1.4em;letter-spacing:1px;">Посты канала</h3>
+        {% if current_user.id == channel.creator_id %}
+        <form method="POST" action="{{ url_for('create_channel_post', channel_id=channel.id) }}" class="post-form" enctype="multipart/form-data" style="margin-top:1.5em;">
+            <textarea name="content" class="input-field" placeholder="Текст поста..." required rows="2" style="width:100%;border-radius:10px;border:1.5px solid var(--main-accent-color);padding:1em;font-size:1.1em;"></textarea>
+            <input type="file" name="file" accept="image/*,video/*" style="margin-left:10px;">
+            <button type="submit" class="channel-btn" style="margin-top:0.7em;">Опубликовать</button>
+        </form>
+        {% endif %}
+        <div class="channel-posts-list">
+            {% for post in channel.posts|reverse %}
+            <div class="channel-post-card">
+                <div class="channel-post-header">
+                    <span class="channel-post-author">Пост от владельца</span>
+                    <span class="channel-post-time">{{ post.timestamp.strftime('%d.%m.%Y %H:%M') }}</span>
+                    {% if current_user.id == post.author_id or current_user.id == channel.creator_id %}
+                    <form method="POST" action="{{ url_for('delete_channel_post', post_id=post.id) }}" style="display:inline;" onsubmit="return confirm('Удалить пост безвозвратно?');">
+                        <button type="submit" class="channel-btn channel-btn-danger" style="margin-left:1em;">Удалить пост</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="channel-post-content">
+                    {{ post.content.split(' [file:')[0] }}
+                    {% if '[file:' in post.content %}
+                        {% set file_url = post.content.split('[file:')[1].split(']')[0] %}
+                        <div class="channel-post-media">
+                        {% if file_url.endswith('.png') or file_url.endswith('.jpg') or file_url.endswith('.jpeg') or file_url.endswith('.gif') or file_url.endswith('.webp') %}
+                            <img src="{{ file_url }}" style="max-width:220px;max-height:220px;margin-top:8px;border-radius:10px;box-shadow:0 2px 12px var(--main-accent-color);">
+                        {% elif file_url.endswith('.mp4') or file_url.endswith('.mov') or file_url.endswith('.avi') %}
+                            <video src="{{ file_url }}" controls style="max-width:320px;max-height:220px;margin-top:8px;border-radius:10px;box-shadow:0 2px 12px var(--main-accent-color);"></video>
+                        {% elif file_url.endswith('.mp3') or file_url.endswith('.wav') %}
+                            <audio src="{{ file_url }}" controls style="margin-top:8px;"></audio>
+                        {% else %}
+                            <div style="margin-top:8px;">
+                                <a href="{{ file_url }}" target="_blank" class="file-download-link channel-btn" style="padding:0.3em 1em;font-size:0.95em;">📎 Скачать файл</a>
+                            </div>
+                        {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="channel-comments-section">
+                    <div style="font-weight:bold;color:var(--main-accent-color);margin-bottom:0.5em;">Комментарии</div>
+                    {% for comment in post.comments %}
+                    <div class="channel-comment">
+                        <span class="channel-comment-author">{{ comment.author.nickname_enc if comment.author else 'Unknown' }}</span>
+                        <span class="channel-comment-time">{{ comment.timestamp.strftime('%d.%m.%Y %H:%M') }}</span>
+                        <div class="channel-comment-content">{{ comment.content.split(' [file:')[0] }}</div>
+                        {% if '[file:' in comment.content %}
+                            {% set file_url = comment.content.split('[file:')[1].split(']')[0] %}
+                            <div class="channel-post-media">
+                            {% if file_url.endswith('.png') or file_url.endswith('.jpg') or file_url.endswith('.jpeg') or file_url.endswith('.gif') or file_url.endswith('.webp') %}
+                                <img src="{{ file_url }}" style="max-width:120px;max-height:120px;margin-top:8px;border-radius:8px;box-shadow:0 2px 8px var(--main-accent-color);">
+                            {% elif file_url.endswith('.mp4') or file_url.endswith('.mov') or file_url.endswith('.avi') %}
+                                <video src="{{ file_url }}" controls style="max-width:180px;max-height:120px;margin-top:8px;border-radius:8px;box-shadow:0 2px 8px var(--main-accent-color);"></video>
+                            {% elif file_url.endswith('.mp3') or file_url.endswith('.wav') %}
+                                <audio src="{{ file_url }}" controls style="margin-top:8px;"></audio>
+                            {% else %}
+                                <div style="margin-top:8px;">
+                                    <a href="{{ file_url }}" target="_blank" class="file-download-link channel-btn" style="padding:0.2em 0.7em;font-size:0.9em;">📎 Скачать файл</a>
+                                </div>
+                            {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <form method="POST" action="{{ url_for('add_channel_comment', post_id=post.id) }}" class="channel-comment-form" enctype="multipart/form-data">
+                        <input type="text" name="content" class="input-field" placeholder="Ваш комментарий..." required>
+                        <input type="file" name="file" accept="image/*,video/*">
+                        <button type="submit">Прокомментировать</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div style="color:#888;font-size:1.1em;text-align:center;">Постов пока нет.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

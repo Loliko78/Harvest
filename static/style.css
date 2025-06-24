@@ -5,26 +5,24 @@
    We are DedSec."
 */
 
+/* DARK ASCII CYBER THEME */
 :root {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
+    --bg-primary: #111112;
+    --bg-secondary: #232326;
     --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --accent-color: #00ff41;
-    --accent-hover: #00cc33;
-    --border-color: #333333;
-    --error-color: #ff4444;
-    --success-color: #44ff44;
-    --warning-color: #ffaa00;
+    --text-secondary: #b0b0b0;
+    --accent-color: #444448;
+    --accent-hover: #66666a;
+    --border-color: #2a2a2d;
+    --error-color: #b84a4a;
+    --success-color: #6a6a6a;
+    --warning-color: #888888;
     --font-main: 'VT323', 'Courier New', monospace;
-    --background-color: #050505;
-    --main-accent-color: #00ff41; /* Neon Green */
-    --secondary-accent-color: #00ff41; /* Formerly Neon Red, now also Green */
+    --background-color: #0a0a0c;
+    --main-accent-color: #444448;
+    --secondary-accent-color: #66666a;
     --text-color: #e0e0e0;
-    --input-bg: #1a1a1a;
-    --glitch-color-1: #00ff41;
-    --glitch-color-2: #00ffff; /* Cyan */
-    --font-main: 'VT323', monospace;
+    --input-bg: #232326;
 }
 
 /* Отключаем все анимации для более плавной работы */
@@ -46,50 +44,122 @@ html {
 }
 
 body {
-    background-color: var(--background-color);
+    background: var(--background-color);
     color: var(--text-color);
     font-family: var(--font-main);
     font-size: 16px;
-    height: 100%;
     margin: 0;
-    overflow: hidden; /* Prevent scrolling on body */
-    position: relative;
-    z-index: 1;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ctext x='0' y='15' font-family='monospace' font-size='10' fill='rgba(0, 255, 65, 0.05)'%3E░▒▓█▓▒░%3C/text%3E%3C/svg%3E");
-    /* Отключаем анимации обновления */
-    animation: none;
-    transition: none;
+    min-height: 100vh;
+    background-image: none;
 }
 
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(0deg, rgba(0, 255, 65, 0.1), rgba(0, 255, 65, 0.1) 1px, transparent 1px, transparent 2px);
-    z-index: -2;
-    pointer-events: none;
+body::before, body::after {
+    display: none !important;
 }
 
-body::after {
-    content: "HARVEST 💀 HACK THE PLANET 💀 HARVEST\A░▒▓█ 0101010101010101010101 █▓▒░\A📱 <---> 💻 <---> 🌐\A╔═╗╔═╗╔═╗╔═╗╦═╗╔═╗╔╦╗  SYSTEM\A╚═╗║  ╠═╣║ ╦║╦nere║╣ ║║  COMPROMISED\A╚═╝╚═╝╩ ╩╚═╝╩ ╩╚═╝═╩╝  💀\A----------------------------------\A  _______   _______   _______ \A /_  _  \\ /_  _  \\ /_  _  \\\A  / / / /  / / / /  / / / / \A / / / /  / / / /  / / / / \A \\ V / /  \\ V / /  \\ V / /  \A  \\_//    \\_//    \\_// \A----------------------------------";
+header, .header, .logo, .logo pre {
+    background: none !important;
+    color: var(--main-accent-color) !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+nav, nav ul, nav ul li a, nav ul li a:hover {
+    background: none !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    text-shadow: none !important;
+}
+
+.flash-success, .flash-danger {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+.btn, .btn-submit, .btn-danger, .btn-secondary, .btn-primary {
+    background: var(--accent-color) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: none !important;
+    transition: background 0.2s;
+}
+.btn:hover, .btn-submit:hover, .btn-danger:hover, .btn-secondary:hover, .btn-primary:hover {
+    background: var(--accent-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+input, textarea, .input-field {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+hr {
+    border-color: var(--border-color) !important;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+}
+
+/* Убираем все глитчи, анимации, неон */
+.glitch-text, .logo-glitch, .glitch, .glitch-text::before, .glitch-text::after {
+    text-shadow: none !important;
+    color: var(--text-color) !important;
+    animation: none !important;
+}
+
+/* Общие контейнеры */
+.page-container, .container, .auth-container, .chat-container, .admin-container, .error-container {
+    background: var(--bg-primary) !important;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    box-shadow: none !important;
+}
+
+/* ASCII-арт */
+.ascii-art {
+    color: #888;
     font-family: 'Courier New', monospace;
-    position: fixed;
-    top: -10%;
-    left: -10%;
-    width: 120%;
-    height: 120%;
-    font-size: 20px;
-    color: rgba(0, 255, 65, 0.12); /* More visible */
-    z-index: -1;
-    pointer-events: none;
+    font-size: 13px;
     text-align: center;
-    overflow: hidden;
-    white-space: pre-wrap;
-    line-height: 1.5;
-    transform: rotate(-10deg) scale(1.1);
+    margin: 20px 0 10px 0;
+    line-height: 1.1;
+    opacity: 0.7;
+    user-select: none;
+}
+
+/* Упрощаем сообщения */
+.message-content, .chat-header, .chat-input-container, .messages-container {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+.message.sent .message-content, .message.received .message-content {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* Убираем цветные индикаторы */
+.unread-indicator, .status-banned, .status-ok {
+    background: none !important;
+    color: #aaa !important;
+    border: none !important;
+}
+
+/* Упрощаем футер */
+.footer-text, .footer-text p {
+    color: #666 !important;
+    text-shadow: none !important;
+    background: none !important;
 }
 
 /* Main page layout */
@@ -919,7 +989,7 @@ body::after {
 }
 
 .chat-tile:hover {
-    background-color: rgba(0, 255, 65, 0.1);
+    background-color: var(--bg-secondary);
     border-color: var(--main-accent-color);
 }
 
@@ -948,11 +1018,11 @@ body::after {
 
 .chat-last {
     font-size: 1em;
-    color: var(--secondary-accent-color);
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px; /* Adjust as needed */
+    max-width: 200px;
 }
 
 .chat-meta {
@@ -961,7 +1031,7 @@ body::after {
 
 .chat-time {
     font-size: 0.9em;
-    color: var(--secondary-accent-color);
+    color: var(--text-secondary);
 }
 
 .unread-indicator {
@@ -2126,7 +2196,7 @@ body.chat-page {
 /* Стили для имени отправителя в групповых чатах */
 .message-sender {
     font-size: 0.75em;
-    color: var(--secondary-accent-color);
+    color: var(--text-secondary);
     font-weight: bold;
     margin-bottom: 2px;
     display: block;
@@ -2460,4 +2530,52 @@ body.chat-page .container {
     .message-sender {
         font-size: 0.7em;
     }
+}
+
+input[type="file"] {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-main, monospace);
+    transition: all 0.3s;
+}
+
+input[type="file"]:hover {
+    border-color: var(--main-accent-color);
+    background: var(--bg-primary);
+}
+
+input[type="file"]::file-selector-button {
+    background: var(--main-accent-color);
+    color: var(--bg-primary);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-main, monospace);
+    font-weight: bold;
+    margin-right: 8px;
+    transition: all 0.3s;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background: #8a7ff0;
+    transform: translateY(-1px);
+}
+
+.file-download-link {
+    color: var(--main-accent-color);
+    text-decoration: none;
+    padding: 4px 8px;
+    border: 1px solid var(--main-accent-color);
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: all 0.3s;
+}
+.file-download-link:hover {
+    background: var(--main-accent-color);
+    color: var(--bg-primary);
 } 

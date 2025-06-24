@@ -1,0 +1,8 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="18" width="60" height="44" rx="8" fill="#232326" stroke="#66666a" stroke-width="2"/>
+  <rect x="16" y="24" width="48" height="32" rx="4" fill="#18181b" stroke="#444448" stroke-width="2"/>
+  <text x="24" y="46" font-family="'Courier New', monospace" font-size="18" fill="#e0e0e0">&gt;_</text>
+  <circle cx="20" cy="22" r="2" fill="#888"/>
+  <circle cx="28" cy="22" r="2" fill="#444448"/>
+  <circle cx="36" cy="22" r="2" fill="#66666a"/>
+</svg> 

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h2>> ПРОФИЛЬ</h2>
+    <div class="profile-avatar-block">
+        <img src="{{ url_for('static', filename=user.avatar or 'avatars/cybermask.svg') }}" class="profile-avatar" alt="avatar">
+        <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" class="avatar-form">
+            <label>Сменить аватарку:</label>
+            <div class="avatar-choices">
+                {% for icon in ['cybermask.svg', 'skull.svg', 'eye.svg', 'terminal.svg', 'hacker.svg'] %}
+                <label>
+                    <input type="radio" name="avatar_choice" value="avatars/{{ icon }}" {% if user.avatar == 'avatars/' + icon %}checked{% endif %}>
+                    <img src="{{ url_for('static', filename='avatars/' + icon) }}" class="avatar-choice-img" alt="std-avatar">
+                </label>
+                {% endfor %}
+                <label>
+                    <input type="file" name="avatar_upload" accept="image/*">
+                    <span class="avatar-upload-label">Загрузить...</span>
+                </label>
+            </div>
+            <button type="submit" class="btn">Сохранить аватарку</button>
+        </form>
+    </div>
+    <div class="profile-info">
+        <div><b>ID:</b> {{ user.id }}</div>
+        <form method="POST" action="{{ url_for('profile') }}">
+            <label class="anon-label">
+                <input type="checkbox" name="anonymous_mode" {% if user.anonymous_mode %}checked{% endif %}>
+                Анонимность (шифрование сообщений)
+            </label>
+            <div class="global-keys-block">
+                <label>Глобальный ключ для чатов:</label>
+                <input type="text" name="global_chat_key" value="{{ user.global_chat_key or '' }}" class="input-field">
+                <button type="button" onclick="generateGlobalChatKey()" class="btn btn-secondary">Генерировать ключ чатов</button>
+                <label>Глобальный ключ для групп:</label>
+                <input type="text" name="global_group_key" value="{{ user.global_group_key or '' }}" class="input-field">
+                <button type="button" onclick="generateGlobalGroupKey()" class="btn btn-secondary">Генерировать ключ групп</button>
+            </div>
+            <button type="submit" class="btn">Сохранить настройки</button>
+        </form>
+        <div class="danger-zone">
+            <h4>Опасная зона</h4>
+            <button onclick="resetAllKeys()" class="btn btn-danger">Сбросить все ключи</button>
+            <form method="POST" action="{{ url_for('profile') }}" onsubmit="return confirm('Удалить профиль безвозвратно?');">
+                <input type="hidden" name="delete_profile" value="1">
+                <button type="submit" class="btn btn-danger" style="margin-top:1em;">Удалить профиль</button>
+            </form>
+        </div>
+    </div>
+</div>
+<style>
+.profile-container { max-width: 500px; margin: 0 auto; background: var(--bg-primary); padding: 2em; border-radius: 10px; }
+.profile-avatar-block { text-align: center; margin-bottom: 2em; }
+.profile-avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--bg-secondary); border: 2px solid var(--border-color); }
+.avatar-choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 1em 0; }
+.avatar-choice-img { width: 48px; height: 48px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; background: var(--bg-secondary); }
+input[type="radio"]:checked + .avatar-choice-img { border-color: var(--main-accent-color); }
+.avatar-upload-label { display: inline-block; padding: 0.5em 1em; background: var(--accent-color); color: var(--text-primary); border-radius: 5px; cursor: pointer; }
+.profile-info { margin-top: 2em; }
+.anon-label { display: flex; align-items: center; gap: 0.5em; margin: 1em 0; }
+.global-keys-block label { margin-top: 1em; display: block; }
+.btn-danger { background: #b84a4a !important; color: #fff !important; }
+.danger-zone {
+    margin-top: 2em;
+    padding: 1em;
+    border: 1px solid #b84a4a;
+    border-radius: 8px;
+    background: rgba(184, 74, 74, 0.1);
+}
+.danger-zone h4 {
+    color: #b84a4a;
+    margin-bottom: 1em;
+}
+.btn-secondary {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    margin-left: 8px;
+}
+.btn-secondary:hover {
+    background: var(--main-accent-color);
+    border-color: var(--main-accent-color);
+}
+@media (max-width: 600px) { .profile-container { padding: 1em; } .avatar-choices { gap: 5px; } }
+</style>
+<script>
+async function generateGlobalChatKey() {
+    try {
+        const response = await fetch('/user/generate_key_json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            document.querySelector('input[name="global_chat_key"]').value = result.key;
+            alert('Глобальный ключ для чатов сгенерирован');
+        }
+    } catch (error) {
+        alert('Ошибка генерации ключа');
+    }
+}
+
+async function generateGlobalGroupKey() {
+    try {
+        const response = await fetch('/user/generate_key_json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            document.querySelector('input[name="global_group_key"]').value = result.key;
+            alert('Глобальный ключ для групп сгенерирован');
+        }
+    } catch (error) {
+        alert('Ошибка генерации ключа');
+    }
+}
+
+function resetAllKeys() {
+    if (confirm('ВНИМАНИЕ! Это действие сбросит ВСЕ ключи во всех чатах и группах. Вы не сможете прочитать старые сообщения. Продолжить?')) {
+        if (confirm('Последнее предупреждение: все зашифрованные сообщения станут недоступны. Точно продолжить?')) {
+            // Очищаем все ключи из localStorage
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.includes('chat_key_') || key.includes('group_key_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            alert('Все ключи сброшены. Перезагрузите страницу.');
+            location.reload();
+        }
+    }
+}
+</script>
+{% endblock %} 

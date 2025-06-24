@@ -9,12 +9,10 @@
         <h3>> ДЕЙСТВИЯ</h3>
         <form method="POST" action="{{ url_for('search') }}" class="sidebar-form">
             <input type="text" name="nickname" class="input-field" placeholder="ПОИСК ПО НИКУ..." required>
-            <button type="submit" class="btn">> НАЙТИ</button>
+            <button type="submit" class="btn btn-full">> НАЙТИ</button>
         </form>
-        <a href="{{ url_for('create_group') }}" class="btn">> СОЗДАТЬ ГРУППУ</a>
-        
-        <!-- Key management can be a future addition -->
-        <!-- <button id="keys-btn" class="btn">> УПРАВЛЕНИЕ КЛЮЧАМИ</button> -->
+        <a href="{{ url_for('create_group') }}" class="btn btn-full">> СОЗДАТЬ ГРУППУ</a>
+        <a href="{{ url_for('create_channel') }}" class="btn btn-full">> СОЗДАТЬ КАНАЛ</a>
     </aside>
 
     <main class="chats-main-content">
@@ -23,7 +21,9 @@
             <div class="chats-list">
                 {% for chat_info in chat_list %}
                     <a href="{{ url_for('chat', chat_id=chat_info.chat.id) }}" class="chat-tile">
-                        <div class="chat-avatar">U</div>
+                        <div class="chat-avatar">
+                            <img src="{{ url_for('static', filename=(chat_info.chat.user2.avatar if current_user.id == chat_info.chat.user1_id else chat_info.chat.user1.avatar) or 'avatars/cybermask.svg') }}" alt="avatar" class="chat-avatar-img">
+                        </div>
                         <div class="chat-info">
                             <div class="chat-nick">{{ chat_info.other_user_nickname }}</div>
                             <div class="chat-last">Личный чат</div>
@@ -45,7 +45,9 @@
             <div class="chats-list">
                 {% for group in group_list %}
                     <a href="{{ url_for('group_chat', invite_link=group.invite_link) }}" class="chat-tile">
-                        <div class="chat-avatar">G</div>
+                        <div class="chat-avatar">
+                            <img src="{{ url_for('static', filename=group.avatar or 'avatars/hacker.svg') }}" alt="avatar" class="chat-avatar-img">
+                        </div>
                         <div class="chat-info">
                             <div class="chat-nick">{{ group.group_name }}</div>
                             <div class="chat-last">Групповой чат</div>
@@ -56,6 +58,28 @@
                     </a>
                 {% else %}
                     <p>> ВЫ НЕ СОСТОИТЕ В ГРУППАХ.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chats-list-container">
+            <h3>> КАНАЛЫ</h3>
+            <div class="chats-list">
+                {% for channel in channel_list %}
+                    <a href="{{ url_for('view_channel', channel_id=channel.id) }}" class="channel-tile">
+                        <div class="channel-header">
+                            <div class="chat-avatar">
+                                <img src="{{ url_for('static', filename=channel.avatar or 'avatars/terminal.svg') }}" alt="avatar" class="chat-avatar-img">
+                            </div>
+                            <div class="channel-name">{{ channel.name }}</div>
+                            <span class="channel-type">Канал</span>
+                        </div>
+                        {% if channel.description %}
+                        <div class="channel-desc">{{ channel.description }}</div>
+                        {% endif %}
+                    </a>
+                {% else %}
+                    <p>> ВЫ НЕ ПОДПИСАНЫ НА КАНАЛЫ.</p>
                 {% endfor %}
             </div>
         </div>
@@ -97,5 +121,127 @@
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
+.chat-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.chat-avatar-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-secondary);
+}
+.btn-full {
+    width: 100%;
+    margin-bottom: 8px;
+}
+.key-management {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+.key-management h4 {
+    color: var(--main-accent-color);
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+.channel-tile {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.channel-tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--main-accent-color), #7a6ff0);
+}
+.channel-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border-color: var(--main-accent-color);
+}
+.channel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.channel-name {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--main-accent-color);
+}
+.channel-type {
+    background: var(--main-accent-color);
+    color: var(--bg-primary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 </style>
+<script>
+async function generateGlobalChatKey() {
+    try {
+        const response = await fetch('/user/generate_key_json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            // Обновляем глобальный ключ чатов
+            const updateResponse = await fetch('/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `global_chat_key=${result.key}`
+            });
+            if (updateResponse.ok) {
+                alert('Глобальный ключ для чатов сгенерирован и сохранён');
+            }
+        }
+    } catch (error) {
+        alert('Ошибка генерации ключа');
+    }
+}
+
+async function generateGlobalGroupKey() {
+    try {
+        const response = await fetch('/user/generate_key_json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            // Обновляем глобальный ключ групп
+            const updateResponse = await fetch('/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `global_group_key=${result.key}`
+            });
+            if (updateResponse.ok) {
+                alert('Глобальный ключ для групп сгенерирован и сохранён');
+            }
+        }
+    } catch (error) {
+        alert('Ошибка генерации ключа');
+    }
+}
+</script>
 {% endblock %} 

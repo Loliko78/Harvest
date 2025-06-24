@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='avatars/harvest_favicon.svg') }}">
     <style>
         /* Base styles from previous implementation */
         .header-logo {
@@ -45,48 +46,41 @@
             color: var(--background-color);
             text-shadow: 0 0 5px var(--background-color);
         }
-
-        .flash-messages {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .flash-messages li {
-            padding: 15px;
-            margin: 10px 20px;
-            border: 1px solid;
-            text-align: center;
-        }
-        .flash-success {
-            background: rgba(0, 255, 65, 0.2);
-            border-color: var(--main-accent-color);
-            color: var(--text-color);
-        }
-        .flash-danger {
-            background: rgba(255, 0, 64, 0.2);
-            border-color: var(--secondary-accent-color);
-            color: var(--text-color);
-        }
     </style>
 </head>
 <body {% if request.endpoint in ['chat', 'group_chat'] %}class="chat-page"{% endif %}>
     <div class="page-container">
         <header>
-            <div class="logo">
-                <pre>
-                    █████   █████   █████████   ███████████   █████   █████ ██████████  █████████  ███████████
-                    ░░███   ░░███   ███░░░░░███ ░░███░░░░░███ ░░███   ░░███ ░░███░░░░░█ ███░░░░░███░█░░░███░░░█
-                     ░███    ░███  ░███    ░███  ░███    ░███  ░███    ░███  ░███  █ ░ ░███    ░░░ ░   ░███  ░ 
-                     ░███████████  ░███████████  ░██████████   ░███    ░███  ░██████   ░░█████████     ░███    
-                     ░███░░░░░███  ░███░░░░░███  ░███░░░░░███  ░░███   ███   ░███░░█    ░░░░░░░░███    ░███    
-                     ░███    ░███  ░███    ░███  ░███    ░███   ░░░█████░    ░███ ░   █ ███    ░███    ░███    
-                     █████   █████ █████   █████ █████   █████    ░░███      ██████████░░█████████     █████   
-                    ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░      ░░░      ░░░░░░░░░░  ░░░░░░░░░     ░░░░░    
-                </pre>
+            <div class="logo" style="text-align:center; margin-bottom: 0.5em;">
+                <svg width="320" height="70" viewBox="0 0 320 70" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:100%; height:auto;">
+                  <rect x="2" y="2" width="316" height="66" rx="18" fill="#18181b" stroke="#444448" stroke-width="3"/>
+                  <g filter="url(#glow)">
+                    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="'VT323', 'Courier New', monospace" font-size="38" fill="#e0e0e0" letter-spacing="2">Harvest</text>
+                  </g>
+                  <g>
+                    <circle cx="35" cy="35" r="10" stroke="#66666a" stroke-width="2" fill="none"/>
+                    <circle cx="285" cy="35" r="10" stroke="#66666a" stroke-width="2" fill="none"/>
+                    <rect x="60" y="15" width="200" height="40" rx="10" fill="none" stroke="#232326" stroke-width="1.5"/>
+                    <path d="M 20 60 Q 40 50 60 60" stroke="#444448" stroke-width="2" fill="none"/>
+                    <path d="M 260 60 Q 280 50 300 60" stroke="#444448" stroke-width="2" fill="none"/>
+                  </g>
+                  <defs>
+                    <filter id="glow" x="0" y="0" width="320" height="70" filterUnits="userSpaceOnUse">
+                      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                </svg>
             </div>
             <nav>
                 <a href="{{ url_for('index') }}">CHATS</a>
                 <a href="{{ url_for('search') }}">SEARCH</a>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('profile') }}">PROFILE</a>
+                {% endif %}
                 {% if current_user.is_authenticated and current_user.is_admin %}
                 <a href="{{ url_for('admin_panel') }}">ADMIN</a>
                 {% endif %}
@@ -95,13 +89,25 @@
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flash-messages">
-                {% for category, message in messages %}
-                    <li class="flash-{{ category }}">{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var messages = {{ messages|tojson }};
+                if (messages.length > 0) {
+                    var toast = document.getElementById('toast');
+                    messages.forEach(function(msg) {
+                        var div = document.createElement('div');
+                        div.className = 'toast-message toast-' + msg[0];
+                        div.textContent = msg[1];
+                        toast.appendChild(div);
+                    });
+                    toast.classList.add('show');
+                    setTimeout(function() {
+                        toast.classList.remove('show');
+                        toast.innerHTML = '';
+                    }, 4000);
+                }
+            });
+            </script>
         {% endwith %}
 
         <main class="content-wrapper">
@@ -114,5 +120,41 @@
             <p class="glitch" data-text="> ACCESS GRANTED. WELCOME, {{ current_user.nickname }}.">> ACCESS GRANTED. WELCOME, {{ current_user.nickname }}.</p>
         </div>
     </div>
+    <div id="toast" class="toast"></div>
+    <style>
+    .toast {
+        position: fixed;
+        top: 30px;
+        right: 30px;
+        z-index: 9999;
+        min-width: 220px;
+        max-width: 350px;
+        background: rgba(30,30,40,0.98);
+        border-radius: 8px;
+        box-shadow: 0 2px 16px #0008;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; pointer-events: auto; }
+    .toast-message {
+        color: var(--text-primary);
+        background: none;
+        border-left: 4px solid var(--main-accent-color);
+        padding: 12px 18px;
+        font-size: 1em;
+        border-radius: 6px;
+        margin: 0;
+        font-family: var(--font-main, monospace);
+        box-shadow: 0 1px 4px #0004;
+    }
+    .toast-success { border-color: #7aef7a; }
+    .toast-danger { border-color: #ef7a7a; }
+    .toast-info { border-color: #7aaff0; }
+    </style>
 </body>
 </html> 

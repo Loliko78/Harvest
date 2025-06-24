@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="16" fill="#18181c"/>
+  <text x="50%" y="54%" text-anchor="middle" fill="#7a6ff0" font-size="38" font-family="monospace,Consolas,Menlo" font-weight="bold" dy=".3em" letter-spacing="2">H</text>
+  <rect x="18" y="18" width="28" height="6" rx="3" fill="#00ff99" opacity="0.7"/>
+  <rect x="18" y="40" width="28" height="6" rx="3" fill="#00ff99" opacity="0.7"/>
+</svg> 

@@ -3,12 +3,42 @@
 {% block title %}Групповой чат: {{ group.name }}{% endblock %}
 
 {% block content %}
+<style>
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+}
+.chat-header-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.chat-header-avatar-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-secondary);
+}
+.avatar-choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 1em 0; }
+.avatar-choice-img { width: 48px; height: 48px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; background: var(--bg-secondary); }
+input[type="radio"]:checked + .avatar-choice-img { border-color: var(--main-accent-color); }
+.avatar-upload-label { display: inline-block; padding: 0.5em 1em; background: var(--accent-color); color: var(--text-primary); border-radius: 5px; cursor: pointer; }
+</style>
 <div class="container">
     <div class="chat-container">
         <div class="chat-header">
+            <div class="chat-header-avatar">
+                <img src="{{ url_for('static', filename=group.avatar or 'avatars/hacker.svg') }}" alt="avatar" class="chat-header-avatar-img">
+            </div>
             <h2>Группа: {{ group.name }}</h2>
             <div class="key-info">
-                <span>Ключ: <span id="headerCurrentKey">Не установлен</span></span>
                 {% if current_user.id == group.creator_id %}
                 <button onclick="showGroupModal()">Управление группой</button>
                 {% endif %}
@@ -22,7 +52,23 @@
             <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
                 <div class="message-content">
                     <span class="message-sender">{{ message.sender.encrypted_nickname }}</span>
-                    <span class="message-text">{{ message.content }}</span>
+                    <span class="message-text">{{ message.content.split(' [file:')[0] }}</span>
+                    {% if '[file:' in message.content %}
+                        {% set file_url = message.content.split('[file:')[1].split(']')[0] %}
+                        {% if file_url.endswith('.png') or file_url.endswith('.jpg') or file_url.endswith('.jpeg') or file_url.endswith('.gif') or file_url.endswith('.webp') %}
+                            <img src="{{ file_url }}" style="max-width:180px;max-height:180px;margin-top:8px;border-radius:8px;">
+                        {% elif file_url.endswith('.mp4') or file_url.endswith('.mov') or file_url.endswith('.avi') %}
+                            <video src="{{ file_url }}" controls style="max-width:220px;max-height:180px;margin-top:8px;border-radius:8px;"></video>
+                        {% elif file_url.endswith('.mp3') or file_url.endswith('.wav') %}
+                            <audio src="{{ file_url }}" controls style="margin-top:8px;"></audio>
+                        {% else %}
+                            <div style="margin-top:8px;">
+                                <a href="{{ file_url }}" target="_blank" class="file-download-link">
+                                    📎 Скачать файл
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
                     <span class="message-time">{{ message.timestamp.strftime('%H:%M') }}</span>
                 </div>
             </div>
@@ -30,7 +76,7 @@
         </div>
         
         <div class="chat-input-container">
-            <form class="chat-input-form" id="messageForm">
+            <form class="chat-input-form" id="messageForm" enctype="multipart/form-data">
                 <div class="chat-input-group">
                     <textarea 
                         class="chat-input" 
@@ -40,6 +86,7 @@
                         rows="1"
                     ></textarea>
                 </div>
+                <input type="file" name="file" id="fileInput" accept="image/*,video/*" style="margin-left:10px;">
                 <button type="submit" class="chat-send-btn">Отправить</button>
             </form>
         </div>
@@ -75,12 +122,29 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <h3>Управление группой</h3>
+        <form method="POST" action="{{ url_for('group_chat', invite_link=invite_link) }}" enctype="multipart/form-data" class="avatar-form">
+            <label>Сменить аватарку группы:</label>
+            <div class="avatar-choices">
+                {% for icon in ['cybermask.svg', 'skull.svg', 'eye.svg', 'terminal.svg', 'hacker.svg'] %}
+                <label>
+                    <input type="radio" name="avatar_choice" value="avatars/{{ icon }}" {% if group.avatar == 'avatars/' + icon %}checked{% endif %}>
+                    <img src="{{ url_for('static', filename='avatars/' + icon) }}" class="avatar-choice-img" alt="std-avatar">
+                </label>
+                {% endfor %}
+                <label>
+                    <input type="file" name="avatar_upload" accept="image/*">
+                    <span class="avatar-upload-label">Загрузить...</span>
+                </label>
+            </div>
+            <button type="submit" class="btn">Сохранить аватарку</button>
+        </form>
         <div class="group-management">
             <div class="group-section">
                 <h4>Участники группы:</h4>
                 <div class="members-list">
                     {% for member in group.members %}
                     <div class="member-item">
+                        <img src="{{ url_for('static', filename=member.avatar or 'avatars/cybermask.svg') }}" class="chat-avatar-img" style="width:32px;height:32px;">
                         <span>{{ member.encrypted_nickname }}</span>
                         {% if member.id != group.creator_id %}
                         <button onclick="removeMember({{ member.id }})" class="btn btn-danger">Удалить</button>
@@ -113,15 +177,13 @@
     const groupId = {{ group.id }};
     const inviteLink = '{{ invite_link }}';
     let currentKey = localStorage.getItem('group_key_' + groupId) || null;
+    const anonymousMode = {{ 'true' if anonymous_mode else 'false' }};
     
     // Присоединяемся к комнате группы
     socket.emit('join_group', {
         invite_link: inviteLink,
         user_id: currentUserId
     });
-    
-    // Обновляем отображение текущего ключа
-    document.getElementById('headerCurrentKey').textContent = currentKey || 'Не установлен';
     
     // Расшифровываем существующие сообщения при загрузке
     async function decryptExistingMessages() {
@@ -158,9 +220,11 @@
             currentKey = newKey;
             localStorage.setItem('group_key_' + groupId, newKey);
             document.getElementById('currentKey').textContent = newKey;
-            document.getElementById('headerCurrentKey').textContent = newKey;
             document.getElementById('newKey').value = '';
             document.getElementById('keyModal').style.display = 'none';
+            
+            // Автоматически перешифровываем все сообщения с новым ключом
+            decryptExistingMessages();
         }
     }
     
@@ -178,8 +242,10 @@
                 currentKey = newKey;
                 localStorage.setItem('group_key_' + groupId, newKey);
                 document.getElementById('currentKey').textContent = newKey;
-                document.getElementById('headerCurrentKey').textContent = newKey;
                 document.getElementById('newKey').value = newKey;
+                
+                // Автоматически перешифровываем все сообщения с новым ключом
+                decryptExistingMessages();
             } else {
                 alert(result.message || 'Ошибка генерации ключа');
             }
@@ -372,96 +438,55 @@
         }
     }
     
-    // Отправка сообщения
-    async function postMessage(text, senderName) {
-        const messagesContainer = document.getElementById('messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message sent';
-        
-        const now = new Date();
-        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
-                          now.getMinutes().toString().padStart(2, '0');
-        
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <span class="message-sender">${senderName}</span>
-                <span class="message-text">${text}</span>
-                <span class="message-time">${timeString}</span>
-            </div>
-        `;
-        
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-    
-    // Обработка отправки формы
+    // Отправка сообщения через форму
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
-    
-    if (messageForm) {
-        messageForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const text = messageInput.value.trim();
-            if (!text) return;
-            
-            // Показываем сообщение сразу
-            await postMessage(text, 'Вы');
-            
-            // Очищаем поле ввода
-            messageInput.value = '';
-            
-            // Шифруем и отправляем на сервер
-            const encryptedText = await encryptMessage(text, currentKey);
-            
-            socket.emit('send_group_message', {
-                content: encryptedText,
-                group_id: groupId,
-                sender_id: currentUserId
+    const fileInput = document.getElementById('fileInput');
+    const messagesContainer = document.getElementById('messages');
+
+    messageForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const text = messageInput.value.trim();
+        const file = fileInput.files[0];
+        if (!text && !file) return;
+        if (file) {
+            const formData = new FormData();
+            formData.append('content_enc', text);
+            formData.append('file', file);
+            await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
             });
+            messageInput.value = '';
+            fileInput.value = '';
+            messageInput.style.height = 'auto';
+            return;
+        }
+        // --- Шифруем текст перед отправкой ---
+        let encrypted = text;
+        if (anonymousMode && currentKey) {
+            encrypted = await encryptMessage(text, currentKey);
+        }
+        socket.emit('send_group_message', {
+            content: encrypted,
+            group_id: groupId,
+            sender_id: currentUserId
         });
-    }
-    
-    // Обработка Enter/Shift+Enter
-    if (messageInput) {
-        messageInput.addEventListener('keydown', async function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                
-                const text = this.value.trim();
-                if (!text) return;
-                
-                // Показываем сообщение сразу
-                await postMessage(text, 'Вы');
-                
-                // Очищаем поле ввода
-                this.value = '';
-                
-                // Шифруем и отправляем на сервер
-                const encryptedText = await encryptMessage(text, currentKey);
-                
-                socket.emit('send_group_message', {
-                    content: encryptedText,
-                    group_id: groupId,
-                    sender_id: currentUserId
-                });
-            }
-        });
-    }
-    
-    // Получение новых сообщений
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+    });
+
+    // Получение новых сообщений (и своих тоже)
     socket.on('new_group_message', async function(data) {
-        if (data.group_id === groupId && data.sender_id !== currentUserId) {
-            const decryptedText = await decryptMessage(data.content, currentKey);
-            
-            const messagesContainer = document.getElementById('messages');
+        if (data.group_id === groupId) {
+            let decryptedText = data.content;
+            if (anonymousMode && currentKey) {
+                decryptedText = await decryptMessage(data.content, currentKey);
+            }
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'message received';
-            
+            messageDiv.className = data.sender_id === currentUserId ? 'message sent' : 'message received';
             const now = new Date();
-            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
-                              now.getMinutes().toString().padStart(2, '0');
-            
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
             messageDiv.innerHTML = `
                 <div class="message-content">
                     <span class="message-sender">${data.sender_name}</span>
@@ -469,7 +494,6 @@
                     <span class="message-time">${timeString}</span>
                 </div>
             `;
-            
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }

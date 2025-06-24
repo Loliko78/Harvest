@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Создать канал{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2>> СОЗДАТЬ КАНАЛ</h2>
+    <form method="POST" action="{{ url_for('create_channel') }}">
+        <div class="form-group">
+            <label for="name">> НАЗВАНИЕ КАНАЛА:</label>
+            <input type="text" name="name" id="name" class="input-field" placeholder="Введите название..." required>
+        </div>
+        <div class="form-group">
+            <label for="description">> ОПИСАНИЕ:</label>
+            <textarea name="description" id="description" class="input-field" placeholder="Кратко о канале..." rows="2"></textarea>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn-submit">> СОЗДАТЬ</button>
+        </div>
+    </form>
+</div>
+{% endblock %} 

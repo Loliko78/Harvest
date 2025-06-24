@@ -5,7 +5,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import os
 from forms import RegisterForm, LoginForm
 from crypto_utils import generate_aes_key, hash_password, check_password, remove_exif_and_mark, encrypt_file, decrypt_file
-from models import User, Chat, Message, File, Group, GroupMember, ReadTracking
+from models import User, Chat, Message, File, Group, GroupMember, ReadTracking, Channel, ChannelPost, ChannelSubscriber, ChannelComment
 import mimetypes
 import uuid
 import logging
@@ -21,7 +21,7 @@ app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32).hex())
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///harvest.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
@@ -112,7 +112,7 @@ def register():
         if User.query.filter_by(nickname_enc=nickname).first():
             flash('Пользователь с таким ником уже существует', 'danger')
             return render_template('register.html', form=form)
-        user = User(nickname_enc=nickname, password_hash=password_hash)
+        user = User(nickname_enc=nickname, password_hash=password_hash, avatar='avatars/user_1.jpg')
         db.session.add(user)
         db.session.commit()
         flash('Регистрация успешна! Теперь войдите.', 'success')
@@ -176,7 +176,8 @@ def index():
             group_list.append({
                 'group_name': group_name,
                 'invite_link': invite_link,
-                'group_id': group.id
+                'group_id': group.id,
+                'avatar': group.avatar
             })
     # Для каждого чата получаем собеседника и последнее сообщение
     chats_with_info = []
@@ -184,48 +185,113 @@ def index():
         other_user = chat.user1 if chat.user1_id != current_user.id else chat.user2
         last_read_entry = ReadTracking.query.filter_by(user_id=current_user.id, chat_id=chat.id).first()
         last_read_time = last_read_entry.last_read if last_read_entry else datetime.min
-        
         unread_count = Message.query.filter(
             Message.chat_id == chat.id,
             Message.timestamp > last_read_time
         ).count()
-
+        # Определяем время последней активности (последнего сообщения)
+        last_message = Message.query.filter_by(chat_id=chat.id).order_by(Message.timestamp.desc()).first()
+        last_activity = last_message.timestamp if last_message else datetime.min
         chats_with_info.append({
             'chat': chat,
             'other_user_nickname': other_user.nickname_enc,
-            'unread_count': unread_count
+            'unread_count': unread_count,
+            'last_activity': last_activity
         })
-
-    return render_template('chats.html', chat_list=chats_with_info, group_list=group_list)
+    # Сортируем чаты по убыванию активности
+    chats_with_info.sort(key=lambda x: x['last_activity'], reverse=True)
+    # Каналы, на которые подписан пользователь
+    channel_subs = ChannelSubscriber.query.filter_by(user_id=current_user.id).all()
+    channel_list = []
+    for sub in channel_subs:
+        channel = Channel.query.get(sub.channel_id)
+        if channel and not channel.deleted:  # Проверяем, что канал существует и не удалён
+            channel_list.append(channel)
+    return render_template('chats.html', chat_list=chats_with_info, group_list=group_list, channel_list=channel_list)
 
 @app.route('/search', methods=['GET', 'POST'])
 @login_required
 def search():
-    results = None
     if request.method == 'POST':
+        # Проверяем, не создается ли новый чат
+        start_chat = request.form.get('start_chat')
+        if start_chat:
+            user_id = int(start_chat)
+            other_user = User.query.get(user_id)
+            if other_user and other_user.id != current_user.id and not other_user.banned:
+                # Проверяем, есть ли уже чат
+                chat = Chat.query.filter(
+                    or_(
+                        (Chat.user1_id == current_user.id) & (Chat.user2_id == user_id),
+                        (Chat.user1_id == user_id) & (Chat.user2_id == current_user.id)
+                    )
+                ).first()
+                
+                if not chat:
+                    chat = Chat(user1_id=current_user.id, user2_id=user_id)
+                    db.session.add(chat)
+                    db.session.commit()
+                
+                return redirect(url_for('chat', chat_id=chat.id))
+            else:
+                flash('Пользователь не найден', 'danger')
+                return redirect(url_for('search'))
+        
         nickname = request.form.get('nickname', '').strip()
         if not nickname:
             flash('Введите ник для поиска', 'danger')
-            return render_template('search.html', results=None)
-        found = User.query.filter(User.nickname_enc.ilike(nickname)).first()
-        if found:
-            if found.id == current_user.id:
-                flash('Нельзя начать чат с собой', 'danger')
-                return render_template('search.html', results=None)
-            chat = Chat.query.filter(
-                or_(
-                    (Chat.user1_id == current_user.id) & (Chat.user2_id == found.id),
-                    (Chat.user1_id == found.id) & (Chat.user2_id == current_user.id)
-                )
-            ).first()
-            if not chat:
-                chat = Chat(user1_id=current_user.id, user2_id=found.id)
-                db.session.add(chat)
-                db.session.commit()
-            return redirect(url_for('chat', chat_id=chat.id))
-        else:
-            flash('Пользователь не найден', 'danger')
-    return render_template('search.html', results=results)
+            return render_template('search.html', results=[])
+        
+        # Поиск пользователей
+        users = User.query.filter(User.nickname_enc.contains(nickname)).all()
+        
+        # Поиск каналов
+        channels = Channel.query.filter(
+            Channel.name.contains(nickname),
+            Channel.deleted == False
+        ).all()
+        
+        results = []
+        for user in users:
+            if user.id != current_user.id and not user.banned:
+                # Проверяем, есть ли уже чат с этим пользователем
+                chat = Chat.query.filter(
+                    or_(
+                        (Chat.user1_id == current_user.id) & (Chat.user2_id == user.id),
+                        (Chat.user1_id == user.id) & (Chat.user2_id == current_user.id)
+                    )
+                ).first()
+                
+                results.append({
+                    'type': 'user',
+                    'id': user.id,
+                    'nickname': user.nickname_enc,
+                    'avatar': user.avatar,
+                    'chat_id': chat.id if chat else None
+                })
+        
+        for channel in channels:
+            # Проверяем, подписан ли пользователь на канал
+            is_subscribed = ChannelSubscriber.query.filter_by(
+                channel_id=channel.id, 
+                user_id=current_user.id
+            ).first() is not None
+            
+            results.append({
+                'type': 'channel',
+                'id': channel.id,
+                'name': channel.name,
+                'description': channel.description,
+                'avatar': channel.avatar,
+                'is_subscribed': is_subscribed
+            })
+        
+        if not results:
+            flash('Ничего не найдено', 'info')
+        
+        return render_template('search.html', results=results)
+    
+    return render_template('search.html', results=[])
 
 @app.route('/chat/<int:chat_id>', methods=['GET', 'POST'])
 @login_required
@@ -254,29 +320,39 @@ def chat(chat_id):
     # Отправка сообщения
     if request.method == 'POST':
         content_enc = request.form.get('content_enc')
-
-        if not content_enc:
+        file = request.files.get('file')
+        file_url = None
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[-1].lower()
+            # Поддерживаем все типы файлов
+            allowed_extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mp3', 'wav', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z']
+            if ext in allowed_extensions:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'chat_{chat_id}_{uuid.uuid4().hex}_{filename}')
+                file.save(file_path)
+                file_url = url_for('static', filename='uploads/' + os.path.basename(file_path))
+        if not content_enc and not file_url:
             return jsonify({'success': False, 'message': 'Missing data'}), 400
-
-        # Сохраняем content_enc как есть (уже в формате iv::content)
+        # Сохраняем content_enc и/или file_url
+        message_content = content_enc or ''
+        if file_url:
+            message_content += f' [file:{file_url}]'
         new_message = Message(
             chat_id=chat_id,
             sender_id=current_user.id,
-            content_enc=content_enc.encode('utf-8')
+            content_enc=message_content.encode('utf-8')
         )
         db.session.add(new_message)
         db.session.commit()
-        
         # Отправляем сообщение через Socket.IO
         message_data = {
             'id': new_message.id,
             'sender_id': new_message.sender_id,
-            'content_enc': content_enc,
+            'content_enc': message_content,
             'timestamp': new_message.timestamp.isoformat(),
             'deleted': new_message.deleted
         }
         emit_new_message(f'chat_{chat_id}', message_data)
-        
         return jsonify({'success': True})
     # Получаем сообщения чата
     messages = Message.query.filter_by(chat_id=chat.id).order_by(Message.timestamp.asc()).all()
@@ -316,7 +392,7 @@ def chat(chat_id):
     
     # E2EE: отдаём ключ в шаблон (base64)
     chat_key_b64 = chat.key_enc.decode('utf-8') if chat.key_enc else ''
-    return render_template('chat.html', chat=chat, messages=messages_data, nickname=nickname, chat_key_b64=chat_key_b64, other_has_key=other_has_key, other_user=other_user, show_sync_button=show_sync_button)
+    return render_template('chat.html', chat=chat, messages=messages_data, nickname=nickname, chat_key_b64=chat_key_b64, other_has_key=other_has_key, other_user=other_user, show_sync_button=show_sync_button, anonymous_mode=current_user.anonymous_mode)
 
 @app.route('/file/<int:file_id>')
 @login_required
@@ -492,32 +568,68 @@ def group_chat(invite_link):
     if not GroupMember.query.filter_by(group_id=found.id, user_id=current_user.id).first():
         flash('Вы не участник этой группы', 'danger')
         return redirect(url_for('index'))
+
+    # Обработка смены аватарки и удаления группы (только для создателя)
+    if request.method == 'POST' and found.creator_id == current_user.id:
+        if 'avatar_choice' in request.form or 'avatar_upload' in request.files:
+            avatar_choice = request.form.get('avatar_choice')
+            avatar_upload = request.files.get('avatar_upload')
+            if avatar_upload and avatar_upload.filename:
+                filename = secure_filename(avatar_upload.filename)
+                ext = filename.rsplit('.', 1)[-1].lower()
+                if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                    avatar_path = f'avatars/group_{found.id}.{ext}'
+                    avatar_upload.save(os.path.join(app.static_folder, avatar_path))
+                    found.avatar = avatar_path
+            elif avatar_choice:
+                found.avatar = avatar_choice
+            db.session.commit()
+            flash('Аватарка группы обновлена', 'success')
+            return redirect(url_for('group_chat', invite_link=invite_link))
+        if request.form.get('delete_group'):
+            # Удаляем все сообщения, участников, саму группу
+            Message.query.filter_by(group_id=found.id).delete()
+            GroupMember.query.filter_by(group_id=found.id).delete()
+            db.session.delete(found)
+            db.session.commit()
+            flash('Группа удалена', 'success')
+            return redirect(url_for('index'))
+
     # Отправка сообщений аналогично чату (можно вынести в функцию)
     if request.method == 'POST':
         content_enc = request.form.get('content_enc')
-
-        if not content_enc:
+        file = request.files.get('file')
+        file_url = None
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[-1].lower()
+            # Поддерживаем все типы файлов
+            allowed_extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mp3', 'wav', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z']
+            if ext in allowed_extensions:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'group_{found.id}_{uuid.uuid4().hex}_{filename}')
+                file.save(file_path)
+                file_url = url_for('static', filename='uploads/' + os.path.basename(file_path))
+        if not content_enc and not file_url:
             return jsonify({'success': False, 'message': 'Missing data'}), 400
-
-        # Сохраняем content_enc как есть (уже в формате iv::content)
+        message_content = content_enc or ''
+        if file_url:
+            message_content += f' [file:{file_url}]'
         new_message = Message(
             group_id=found.id,
             sender_id=current_user.id,
-            content_enc=content_enc.encode('utf-8')
+            content_enc=message_content.encode('utf-8')
         )
         db.session.add(new_message)
         db.session.commit()
-        
         # Отправляем сообщение через Socket.IO
         message_data = {
             'id': new_message.id,
             'sender_id': new_message.sender_id,
-            'content_enc': content_enc,
+            'content_enc': message_content,
             'timestamp': new_message.timestamp.isoformat(),
             'deleted': new_message.deleted
         }
         emit_new_message(f'group_{invite_link}', message_data)
-        
         return jsonify({'success': True})
     # Получаем сообщения группы
     messages = Message.query.filter_by(group_id=found.id).order_by(Message.timestamp.asc()).all()
@@ -572,7 +684,7 @@ def group_chat(invite_link):
             # If not, encode it
             group_key_b64 = base64.b64encode(found.session_key).decode('utf-8')
 
-    return render_template('group_chat.html', group=found, messages=messages_data, group_name=group_name, invite_link=invite_link, is_creator=is_creator, group_key_b64=group_key_b64)
+    return render_template('group_chat.html', group=found, messages=messages_data, group_name=group_name, invite_link=invite_link, is_creator=is_creator, group_key_b64=group_key_b64, anonymous_mode=current_user.anonymous_mode)
 
 @app.route('/admin/delete_group/<int:group_id>', methods=['POST'])
 @login_required
@@ -772,38 +884,37 @@ def invite_by_nickname(invite_link):
         except Exception:
             continue
     if not found:
-        flash('Группа не найдена', 'danger')
-        return redirect(url_for('index'))
+        return jsonify({'success': False, 'message': 'Группа не найдена'})
     
     # Проверяем, что пользователь является создателем группы
     if found.creator_id != current_user.id:
-        flash('Только создатель группы может приглашать участников', 'danger')
-        return redirect(url_for('group_members', invite_link=invite_link))
+        return jsonify({'success': False, 'message': 'Только создатель группы может приглашать участников'})
     
-    nickname = request.form.get('nickname', '').strip()
+    # Получаем данные из JSON
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Неверный формат данных'})
+    
+    nickname = data.get('nickname', '').strip()
     if not nickname:
-        flash('Введите ник пользователя', 'danger')
-        return redirect(url_for('group_members', invite_link=invite_link))
+        return jsonify({'success': False, 'message': 'Введите ник пользователя'})
     
     # Ищем пользователя по нику
     user = User.query.filter_by(nickname_enc=nickname).first()
     if not user:
-        flash('Пользователь с таким ником не найден', 'danger')
-        return redirect(url_for('group_members', invite_link=invite_link))
+        return jsonify({'success': False, 'message': 'Пользователь с таким ником не найден'})
     
     # Проверяем, не состоит ли уже пользователь в группе
     existing_member = GroupMember.query.filter_by(group_id=found.id, user_id=user.id).first()
     if existing_member:
-        flash('Пользователь уже состоит в группе', 'danger')
-        return redirect(url_for('group_members', invite_link=invite_link))
+        return jsonify({'success': False, 'message': 'Пользователь уже состоит в группе'})
     
     # Добавляем пользователя в группу
     new_member = GroupMember(group_id=found.id, user_id=user.id)
     db.session.add(new_member)
     db.session.commit()
     
-    flash(f'Пользователь {nickname} успешно приглашен в группу!', 'success')
-    return redirect(url_for('group_members', invite_link=invite_link))
+    return jsonify({'success': True, 'message': f'Пользователь {nickname} успешно приглашен в группу!'})
 
 @app.route('/user/<int:user_id>/public_key')
 @login_required
@@ -1094,6 +1205,19 @@ def get_group_members(invite_link):
     
     return jsonify({'members': members})
 
+@app.route('/group/<invite_link>/sync_keys', methods=['POST'])
+@login_required
+def sync_group_keys(invite_link):
+    group = Group.query.filter_by(invite_link_enc=invite_link.encode('utf-8')).first_or_404()
+    if group.creator_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Только создатель группы может синхронизировать ключи'}), 403
+    # Генерируем новый ключ
+    import base64, os
+    new_key = base64.b64encode(os.urandom(32))
+    group.session_key = new_key
+    db.session.commit()
+    return jsonify({'success': True, 'key': new_key.decode('utf-8')})
+
 # WebSocket handlers
 @socketio.on('join_chat')
 def on_join_chat(data):
@@ -1295,7 +1419,208 @@ def handle_exception(error):
                          timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                          request_id=request.headers.get('X-Request-ID', 'N/A')), getattr(error, 'code', 500)
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        # Удаление профиля
+        if request.form.get('delete_profile'):
+            user_id = current_user.id
+            logout_user()
+            user = User.query.get(user_id)
+            db.session.delete(user)
+            db.session.commit()
+            flash('Профиль удалён', 'success')
+            return redirect(url_for('login'))
+
+        # Смена аватарки
+        avatar_choice = request.form.get('avatar_choice')
+        avatar_upload = request.files.get('avatar_upload')
+        if avatar_upload and avatar_upload.filename:
+            filename = secure_filename(avatar_upload.filename)
+            ext = filename.rsplit('.', 1)[-1].lower()
+            if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                avatar_path = f'avatars/user_{current_user.id}.{ext}'
+                avatar_upload.save(os.path.join(app.static_folder, avatar_path))
+                current_user.avatar = avatar_path
+        elif avatar_choice:
+            current_user.avatar = avatar_choice
+
+        # Тумблер анонимности
+        current_user.anonymous_mode = bool(request.form.get('anonymous_mode'))
+        # Глобальные ключи
+        current_user.global_chat_key = request.form.get('global_chat_key', '').strip() or None
+        current_user.global_group_key = request.form.get('global_group_key', '').strip() or None
+        db.session.commit()
+        flash('Настройки профиля обновлены', 'success')
+        return redirect(url_for('profile'))
+    return render_template('profile.html', user=current_user)
+
+@app.route('/channels/create', methods=['GET', 'POST'])
+@login_required
+def create_channel():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        if not name:
+            flash('Введите название канала', 'danger')
+            return render_template('create_channel.html')
+        channel = Channel(name=name, description=description, creator_id=current_user.id)
+        db.session.add(channel)
+        db.session.commit()  # Сначала сохраняем канал, чтобы получить channel.id
+        db.session.add(ChannelSubscriber(channel_id=channel.id, user_id=current_user.id))
+        db.session.commit()
+        flash('Канал создан!', 'success')
+        return redirect(url_for('view_channel', channel_id=channel.id))
+    return render_template('create_channel.html')
+
+@app.route('/channel/<int:channel_id>', methods=['GET', 'POST'])
+@login_required
+def view_channel(channel_id):
+    channel = Channel.query.get_or_404(channel_id)
+    # Смена аватарки (только для создателя)
+    if request.method == 'POST' and channel.creator_id == current_user.id:
+        avatar_choice = request.form.get('avatar_choice')
+        avatar_upload = request.files.get('avatar_upload')
+        if avatar_upload and avatar_upload.filename:
+            filename = secure_filename(avatar_upload.filename)
+            ext = filename.rsplit('.', 1)[-1].lower()
+            if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                avatar_path = f'avatars/channel_{channel.id}.{ext}'
+                avatar_upload.save(os.path.join(app.static_folder, avatar_path))
+                channel.avatar = avatar_path
+        elif avatar_choice:
+            channel.avatar = avatar_choice
+        db.session.commit()
+        flash('Аватарка канала обновлена', 'success')
+        return redirect(url_for('view_channel', channel_id=channel.id))
+    # Получаем посты с комментариями и авторами
+    posts = channel.posts.order_by(ChannelPost.timestamp.desc()).all()
+    for post in posts:
+        post.comments = post.comments.order_by(ChannelComment.timestamp.asc()).all()
+        for comment in post.comments:
+            comment.author = User.query.get(comment.author_id)
+    channel.posts = posts
+    return render_template('channel.html', channel=channel)
+
+@app.route('/channel/<int:channel_id>/delete', methods=['POST'])
+@login_required
+def delete_channel(channel_id):
+    channel = Channel.query.get_or_404(channel_id)
+    if channel.creator_id != current_user.id:
+        flash('Нет прав на удаление канала', 'danger')
+        return redirect(url_for('view_channel', channel_id=channel.id))
+    # Мягкое удаление - устанавливаем флаг deleted
+    channel.deleted = True
+    db.session.commit()
+    flash('Канал удалён', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/channel/<int:channel_id>/post', methods=['POST'])
+@login_required
+def create_channel_post(channel_id):
+    channel = Channel.query.get_or_404(channel_id)
+    if channel.creator_id != current_user.id:
+        flash('Только владелец может публиковать посты', 'danger')
+        return redirect(url_for('view_channel', channel_id=channel_id))
+    content = request.form.get('content', '').strip()
+    file = request.files.get('file')
+    file_url = None
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        ext = filename.rsplit('.', 1)[-1].lower()
+        # Поддерживаем все типы файлов
+        allowed_extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mp3', 'wav', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z']
+        if ext in allowed_extensions:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'channel_{channel_id}_{uuid.uuid4().hex}_{filename}')
+            file.save(file_path)
+            file_url = url_for('static', filename='uploads/' + os.path.basename(file_path))
+    if not content and not file_url:
+        flash('Пост не может быть пустым', 'danger')
+        return redirect(url_for('view_channel', channel_id=channel_id))
+    post_content = content or ''
+    if file_url:
+        post_content += f' [file:{file_url}]'
+    post = ChannelPost(channel_id=channel_id, author_id=current_user.id, content=post_content)
+    db.session.add(post)
+    db.session.commit()
+    flash('Пост опубликован', 'success')
+    return redirect(url_for('view_channel', channel_id=channel_id))
+
+@app.route('/channel/<int:channel_id>/subscribe', methods=['POST'])
+@login_required
+def subscribe_channel(channel_id):
+    channel = Channel.query.get_or_404(channel_id)
+    if ChannelSubscriber.query.filter_by(channel_id=channel_id, user_id=current_user.id).first():
+        flash('Вы уже подписаны', 'info')
+    else:
+        db.session.add(ChannelSubscriber(channel_id=channel_id, user_id=current_user.id))
+        db.session.commit()
+        flash('Вы подписались на канал', 'success')
+    return redirect(url_for('view_channel', channel_id=channel_id))
+
+@app.route('/channel/<int:channel_id>/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_channel(channel_id):
+    sub = ChannelSubscriber.query.filter_by(channel_id=channel_id, user_id=current_user.id).first()
+    if sub:
+        db.session.delete(sub)
+        db.session.commit()
+        flash('Вы отписались от канала', 'success')
+    else:
+        flash('Вы не были подписаны', 'info')
+    return redirect(url_for('view_channel', channel_id=channel_id))
+
+@app.route('/channel/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_channel_comment(post_id):
+    post = ChannelPost.query.get_or_404(post_id)
+    content = request.form.get('content', '').strip()
+    file = request.files.get('file')
+    file_url = None
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        ext = filename.rsplit('.', 1)[-1].lower()
+        # Поддерживаем все типы файлов
+        allowed_extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mp3', 'wav', 'pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z']
+        if ext in allowed_extensions:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'channel_comment_{post_id}_{uuid.uuid4().hex}_{filename}')
+            file.save(file_path)
+            file_url = url_for('static', filename='uploads/' + os.path.basename(file_path))
+    if not content and not file_url:
+        flash('Комментарий не может быть пустым', 'danger')
+        return redirect(url_for('view_channel', channel_id=post.channel_id))
+    comment_content = content or ''
+    if file_url:
+        comment_content += f' [file:{file_url}]'
+    comment = ChannelComment(post_id=post_id, author_id=current_user.id, content=comment_content)
+    db.session.add(comment)
+    db.session.commit()
+    flash('Комментарий добавлен', 'success')
+    return redirect(url_for('view_channel', channel_id=post.channel_id))
+
+@app.route('/channel/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_channel_post(post_id):
+    post = ChannelPost.query.get_or_404(post_id)
+    channel = Channel.query.get_or_404(post.channel_id)
+    if current_user.id != post.author_id and current_user.id != channel.creator_id:
+        flash('Нет прав на удаление поста', 'danger')
+        return redirect(url_for('view_channel', channel_id=channel.id))
+    db.session.delete(post)
+    db.session.commit()
+    flash('Пост удалён', 'success')
+    return redirect(url_for('view_channel', channel_id=channel.id))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        if not User.query.filter_by(nickname_enc='azazel').first():
+            admin = User(
+                nickname_enc='azazel',
+                password_hash=hash_password('Log1progress'),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
     socketio.run(app, debug=True, host='0.0.0.0', port=5000) 
